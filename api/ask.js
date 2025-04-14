@@ -14,21 +14,18 @@ export default async function handler(req, res) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-3.5-turbo",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 100
-      })
+        max_tokens: 100,
+      }),
     });
 
     const data = await response.json();
-    console.log("DEBUG: OpenAI response:", data); // 🟡 AICI VEDEM CE PRIMIM
-
-    const reply = data?.choices?.[0]?.message?.content || "No response from OpenAI.";
+    const reply = data.choices?.[0]?.message?.content || "No response from OpenAI.";
     return res.status(200).json({ reply });
-
   } catch (error) {
     return res.status(500).json({ error: "Failed to fetch from OpenAI." });
   }
