@@ -18,20 +18,15 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "gpt-4o",
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
+        messages: [{ role: "user", content: prompt }],
         max_tokens: 100
       })
     });
 
     const data = await response.json();
-    
-    const reply = data?.choices?.[0]?.message?.content || "No response from OpenAI.";
+    console.log("DEBUG: OpenAI response:", data); // 🟡 AICI VEDEM CE PRIMIM
 
+    const reply = data?.choices?.[0]?.message?.content || "No response from OpenAI.";
     return res.status(200).json({ reply });
 
   } catch (error) {
