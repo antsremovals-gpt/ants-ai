@@ -16,12 +16,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userMessage } = req.body;
+    const { messages } = req.body;
 
-    const messages = [
-      {
-        role: "system",
-        content: `
+    // Adaugăm promptul nostru ca prim mesaj "system"
+    const systemMessage = {
+      role: "system",
+      content: `
 You are Ants Removals AI Assistant, created specifically to help clients with questions about moving and storage services offered by Ants Removals in North London. You must respond in a professional, polite and helpful tone, and never go off-topic.
 
 Here are some typical questions and the recommended answers:
@@ -48,13 +48,10 @@ If a user asks something unrelated to Ants Removals services, kindly let them kn
 "I'm here to help with anything related to Ants Removals' moving and storage services."
 
 Do not invent information, and never answer questions unrelated to moving, storage, or Ants Removals.
-        `.trim(),
-      },
-      {
-        role: "user",
-        content: userMessage,
-      },
-    ];
+      `.trim(),
+    };
+
+    const fullMessages = [systemMessage, ...messages];
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -63,8 +60,8 @@ Do not invent information, and never answer questions unrelated to moving, stora
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: messages,
+        model: "gpt-3.5-turbo", // sau "gpt-4-turbo" dacă folosești GPT-4
+        messages: fullMessages,
       }),
     });
 
