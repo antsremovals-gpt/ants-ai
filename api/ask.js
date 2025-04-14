@@ -1,34 +1,38 @@
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*"); // ← linia esențială
+  // CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Only POST requests allowed" });
+  // OPTIONS preflight
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
   }
 
-  const { prompt } = req.body;
-  if (!prompt) {
-    return res.status(400).json({ error: "Prompt missing" });
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "Only POST requests allowed" });
+    return;
   }
 
   try {
+    const { messages } = req.body;
+
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 400
-      })
+        model: "gpt-4-turbo",
+        messages: messages,
+      }),
     });
 
     const data = await response.json();
-    const reply = data.choices?.[0]?.message?.content || "No response.";
-    return res.status(200).json({ reply });
-
+    res.status(200).json({ reply: data.choices[0].message.content });
   } catch (error) {
-    return res.status(500).json({ error: "Failed to fetch from OpenAI." });
+    res.status(500).json({ error: "Something went wrong." });
   }
 }
