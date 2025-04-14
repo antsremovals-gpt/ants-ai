@@ -4,6 +4,7 @@ export default async function handler(req, res) {
   }
 
   const { prompt } = req.body;
+
   if (!prompt) {
     return res.status(400).json({ error: "Prompt missing" });
   }
@@ -13,18 +14,26 @@ export default async function handler(req, res) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer sk-proj-KEY_TAUA"
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
         model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 400
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 100
       })
     });
 
     const data = await response.json();
-    const reply = data.choices?.[0]?.message?.content || "No response.";
+    
+    const reply = data?.choices?.[0]?.message?.content || "No response from OpenAI.";
+
     return res.status(200).json({ reply });
+
   } catch (error) {
     return res.status(500).json({ error: "Failed to fetch from OpenAI." });
   }
