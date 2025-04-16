@@ -53,7 +53,7 @@ Always keep the conversation polite, confident, and focused on assisting the use
     const data = await response.json();
     res.status(200).json({ reply: data.choices[0].message.content });
   } catch (error) {
-    Moved ask.js to pages/api
+    Restore working ask.js
 
     res.status(500).json({ error: "Something went wrong." });
   }
