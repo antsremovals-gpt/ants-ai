@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     service: "gmail",
     auth: {
       user: "ants.ai.report@gmail.com",
-      pass: "hpht znsw eymw ifdg", // parolă aplicație Gmail
+      pass: "hpht znsw eymw ifdg", // parola de aplicație nouă
     },
   });
 
