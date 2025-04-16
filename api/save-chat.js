@@ -23,17 +23,15 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "No messages to save" });
   }
 
-  // Formatăm conversația pentru email
   const conversationText = messages
     .map(m => `${m.role.toUpperCase()}: ${m.content}`)
     .join("\n\n");
 
-  // Configurare nodemailer
   const transporter = nodemailer.createTransport({
     service: 'Gmail',
     auth: {
       user: 'ants.ai.report@gmail.com',
-      pass: 'hphtznsweymwifdg'
+      pass: 'hphtznsweymwifdg' // parola ta de aplicație
     }
   });
 
@@ -49,3 +47,4 @@ export default async function handler(req, res) {
   console.error("Save Chat Error:", error);
   res.status(500).json({ error: error.message });
 }
+
