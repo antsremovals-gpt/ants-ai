@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "dependencies": {
-    "node-mailjet": "^3.3.1"
+    "node-mailjet": "^3.3.1",
+    "nodemailer": "^6.9.1"
   }
 }
