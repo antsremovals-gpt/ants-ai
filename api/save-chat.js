@@ -45,7 +45,7 @@ export default async function handler(req, res) {
 
   res.status(200).json({ success: true });
 } catch (error) {
-  console.error("Save Chat Error:", error);
+ console.error("Save Chat Error:", error.message, error.stack);
   res.status(500).json({ error: error.message });
 }
 
