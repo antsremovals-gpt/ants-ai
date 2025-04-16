@@ -1,54 +1,35 @@
-import nodemailer from "nodemailer";
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "ants.ai.report@gmail.com",
-    pass: "hpht znsw eymw ifdg"
-  }
-});
-
-function formatDate(date) {
-  return date.toLocaleString("en-GB", {
-    timeZone: "Europe/London",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).replace(",", "");
-}
-
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  // CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+
+  // Răspunde la preflight
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
   }
 
-  const { messages } = req.body;
-
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    return res.status(400).json({ error: "No messages received" });
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "Only POST requests allowed" });
+    return;
   }
 
   try {
-    const startTime = new Date(messages[0].timestamp || Date.now());
-    const endTime = new Date(messages[messages.length - 1].timestamp || Date.now());
-    const subject = `AI Chat – ${formatDate(startTime)} to ${formatDate(endTime)}`;
+    const { chatID, messages } = req.body;
 
-    const htmlBody = messages.map(msg => {
-      return `<p><strong>${msg.role.toUpperCase()}:</strong> ${msg.content}</p>`;
-    }).join("<hr>");
+    // Verificăm că avem ce salva
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: "No messages to save" });
+    }
 
-    await transporter.sendMail({
-      from: '"AI-Asistent-ANTS" <ants.ai.report@gmail.com>',
-      to: "ants.ai.report@gmail.com",
-      subject: subject,
-      html: `<h2>Full AI Conversation</h2>${htmlBody}`
-    });
+    // Trimitere email logic aici – momentan doar log
+    console.log("✅ Chat received:", chatID);
+    console.log(JSON.stringify(messages, null, 2));
 
-    res.status(200).json({ success: true, message: "Email sent successfully via Gmail." });
+    res.status(200).json({ success: true });
   } catch (error) {
-    console.error("Gmail SMTP error:", error);
-    res.status(500).json({ error: "Failed to send email via Gmail." });
+    console.error("Save Chat Error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 }
