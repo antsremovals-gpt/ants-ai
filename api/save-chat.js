@@ -1,49 +1,54 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Test Save Chat to Gmail</title>
-</head>
-<body>
-  <h2>Test Save AI Conversation</h2>
-  <button onclick="sendConversation()">Trimite Conversația</button>
-  <p id="status"></p>
-  <pre id="response"></pre>
+import nodemailer from "nodemailer";
 
-  <script>
-    async function sendConversation() {
-      const messages = [
-        { role: "user", content: "Hi, can you help me move a few boxes?" },
-        { role: "assistant", content: "Of course! Ants Removals is here to help with your move." },
-        { role: "user", content: "Do you also offer storage services?" },
-        { role: "assistant", content: "Yes, we offer both short-term and long-term container storage solutions." }
-      ];
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "ants.ai.report@gmail.com",
+    pass: "hpht znsw eymw ifdg"
+  }
+});
 
-      const status = document.getElementById("status");
-      const responseBox = document.getElementById("response");
-      status.innerText = "Sending...";
-      responseBox.innerText = "";
+function formatDate(date) {
+  return date.toLocaleString("en-GB", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).replace(",", "");
+}
 
-      try {
-        const res = await fetch("https://ants-ai.vercel.app/api/save-chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages })
-        });
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
-        const data = await res.json();
-        responseBox.innerText = JSON.stringify(data, null, 2);
+  const { messages } = req.body;
 
-        if (res.ok) {
-          status.innerText = "✅ Email sent successfully!";
-        } else {
-          status.innerText = `❌ Error ${res.status}`;
-        }
-      } catch (err) {
-        console.error(err);
-        status.innerText = "❌ Failed to connect.";
-        responseBox.innerText = err.message;
-      }
-    }
-  </script>
-</body>
-</html>
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: "No messages received" });
+  }
+
+  try {
+    const startTime = new Date(messages[0].timestamp || Date.now());
+    const endTime = new Date(messages[messages.length - 1].timestamp || Date.now());
+    const subject = `AI Chat – ${formatDate(startTime)} to ${formatDate(endTime)}`;
+
+    const htmlBody = messages.map(msg => {
+      return `<p><strong>${msg.role.toUpperCase()}:</strong> ${msg.content}</p>`;
+    }).join("<hr>");
+
+    await transporter.sendMail({
+      from: '"AI-Asistent-ANTS" <ants.ai.report@gmail.com>',
+      to: "ants.ai.report@gmail.com",
+      subject: subject,
+      html: `<h2>Full AI Conversation</h2>${htmlBody}`
+    });
+
+    res.status(200).json({ success: true, message: "Email sent successfully via Gmail." });
+  } catch (error) {
+    console.error("Gmail SMTP error:", error);
+    res.status(500).json({ error: "Failed to send email via Gmail." });
+  }
+}
