@@ -1,4 +1,3 @@
-// FINAL: Trimite email + rezolvă CORS
 import nodemailer from 'nodemailer';
 
 export default async function handler(req, res) {
