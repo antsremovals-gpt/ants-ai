@@ -28,12 +28,13 @@ export default async function handler(req, res) {
     .join("\n\n");
 
   const transporter = nodemailer.createTransport({
-    service: 'Gmail',
-    auth: {
-      user: 'ants.ai.report@gmail.com',
-      pass: 'hphtznsweymwifdg' // parola ta de aplicație
-    }
-  });
+  service: 'Gmail',
+  secure: true,
+  auth: {
+    user: 'ants.ai.report@gmail.com',
+    pass: 'hphtznsweymwifdg'
+  }
+});
 
   await transporter.sendMail({
     from: 'AI-Asistent-ANTS <ants.ai.report@gmail.com>',
