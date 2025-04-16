@@ -53,8 +53,7 @@ Always keep the conversation polite, confident, and focused on assisting the use
     const data = await response.json();
     res.status(200).json({ reply: data.choices[0].message.content });
   } catch (error) {
-    Restore working ask.js
-
+    console.error("OpenAI Error:", error);
     res.status(500).json({ error: "Something went wrong." });
   }
 }
