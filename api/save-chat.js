@@ -1,4 +1,4 @@
-const nodemailer = require("nodemailer");
+import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -19,7 +19,7 @@ function formatDate(date) {
   }).replace(",", "");
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -51,4 +51,4 @@ module.exports = async (req, res) => {
     console.error("Gmail SMTP error:", error);
     res.status(500).json({ error: "Failed to send email via Gmail." });
   }
-};
+}
