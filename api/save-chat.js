@@ -1,3 +1,7 @@
+from pathlib import Path
+
+# Codul final, corect cu `require()` pentru compatibilitate Node.js pe Vercel
+save_chat_corrected = """
 const mailjet = require('node-mailjet')
   .connect(
     '9c24e3383ec9713c7dc1f939224c052b',
@@ -11,7 +15,7 @@ function formatDate(date) {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
-    minute: "2-digit",
+    minute: "2-digit"
   }).replace(",", "");
 }
 
@@ -62,3 +66,11 @@ export default async function handler(req, res) {
     res.status(500).json({ error: "Failed to send email" });
   }
 }
+"""
+
+# Scriem fișierul pentru descărcare
+path = Path("/mnt/data/save-chat-require.js")
+path.write_text(save_chat_corrected)
+
+path.name
+
