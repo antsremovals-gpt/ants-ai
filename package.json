@@ -1,0 +1,9 @@
+
+{
+  "name": "ants-ai",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "node-mailjet": "^3.3.1"
+  }
+}
