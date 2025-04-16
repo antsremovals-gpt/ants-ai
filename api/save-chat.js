@@ -1,7 +1,3 @@
-test functional partial nu complet
-
-
-
 import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
