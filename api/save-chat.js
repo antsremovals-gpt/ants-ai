@@ -5,42 +5,13 @@ const mailjetClient = mailjet.apiConnect(
   "a2af416983593878c133071a924c8d90"
 );
 
-function formatDate(date) {
-  return date.toLocaleString("en-GB", {
-    timeZone: "Europe/London",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).replace(",", "");
-}
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { messages } = req.body;
-
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    return res.status(400).json({ error: "No messages received" });
-  }
-
   try {
-    const start = new Date(messages[0].timestamp || Date.now());
-    const end = new Date(messages[messages.length - 1].timestamp || Date.now());
-
-    const startTime = formatDate(start);
-    const endTime = formatDate(end);
-
-    const subject = `AI Chat – ${startTime} to ${endTime}`;
-
-    const htmlBody = messages.map((msg, index) => {
-      return `<p><strong>${msg.role.toUpperCase()}:</strong> ${msg.content}</p>`;
-    }).join("<hr>");
-
-    await mailjetClient
+    const result = await mailjetClient
       .post("send", { version: "v3.1" })
       .request({
         Messages: [
@@ -55,16 +26,16 @@ export default async function handler(req, res) {
                 Name: "Ovidiu"
               }
             ],
-            Subject: subject,
-            HTMLPart: `<h2>Full AI Conversation</h2>${htmlBody}`
+            Subject: "Test – Mailjet Connection",
+            TextPart: "This is a simple test to verify Mailjet connection is working."
           }
         ]
       });
 
-    res.status(200).json({ success: true, message: "Email sent successfully" });
-
+    console.log("Mailjet response:", result.body);
+    res.status(200).json({ success: true, message: "Mail sent." });
   } catch (error) {
     console.error("Mailjet error:", error);
-    res.status(500).json({ error: "Failed to send email" });
+    res.status(500).json({ error: "Failed to send email via Mailjet." });
   }
 }
