@@ -1,10 +1,12 @@
+// FINAL: Trimite email + rezolvă CORS
+import nodemailer from 'nodemailer';
+
 export default async function handler(req, res) {
-  // CORS
+  // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 
-  // Răspunde la preflight
   if (req.method === "OPTIONS") {
     res.status(200).end();
     return;
@@ -16,20 +18,35 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { chatID, messages } = req.body;
+  const { chatID, messages } = req.body;
 
-    // Verificăm că avem ce salva
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: "No messages to save" });
-    }
-
-    // Trimitere email logic aici – momentan doar log
-    console.log("✅ Chat received:", chatID);
-    console.log(JSON.stringify(messages, null, 2));
-
-    res.status(200).json({ success: true });
-  } catch (error) {
-    console.error("Save Chat Error:", error);
-    res.status(500).json({ error: "Internal server error" });
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: "No messages to save" });
   }
+
+  // Formatăm conversația pentru email
+  const conversationText = messages
+    .map(m => `${m.role.toUpperCase()}: ${m.content}`)
+    .join("\n\n");
+
+  // Configurare nodemailer
+  const transporter = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+      user: 'ants.ai.report@gmail.com',
+      pass: 'hphtznsweymwifdg'
+    }
+  });
+
+  await transporter.sendMail({
+    from: 'AI-Asistent-ANTS <ants.ai.report@gmail.com>',
+    to: 'ants.ai.report@gmail.com',
+    subject: `AI Chat - ${new Date().toLocaleDateString('en-GB')} ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`,
+    text: conversationText
+  });
+
+  res.status(200).json({ success: true });
+} catch (error) {
+  console.error("Save Chat Error:", error);
+  res.status(500).json({ error: "Internal server error" });
 }
