@@ -1,9 +1,8 @@
-import mailjet from "node-mailjet";
-
-const mailjetClient = mailjet.apiConnect(
-  "9c24e3383ec9713c7dc1f939224c052b",
-  "a2af416983593878c133071a924c8d90"
-);
+const mailjet = require('node-mailjet')
+  .connect(
+    '9c24e3383ec9713c7dc1f939224c052b',
+    'a2af416983593878c133071a924c8d90'
+  );
 
 function formatDate(date) {
   return date.toLocaleString("en-GB", {
@@ -30,14 +29,13 @@ export default async function handler(req, res) {
   try {
     const startTime = new Date(messages[0].timestamp || Date.now());
     const endTime = new Date(messages[messages.length - 1].timestamp || Date.now());
-
     const subject = `AI Chat – ${formatDate(startTime)} to ${formatDate(endTime)}`;
 
     const htmlBody = messages.map(msg => {
       return `<p><strong>${msg.role.toUpperCase()}:</strong> ${msg.content}</p>`;
     }).join("<hr>");
 
-    await mailjetClient
+    await mailjet
       .post("send", { version: "v3.1" })
       .request({
         Messages: [
