@@ -45,7 +45,7 @@ Always keep the conversation polite, confident, and focused on assisting the use
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4-turbo",
         messages: fullMessages,
       }),
     });
