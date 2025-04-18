@@ -33,7 +33,7 @@ We offer tailored removals services across North London for both commercial and 
 [CONTACT]
 You can contact Ants Removals in the following ways:
 
-Request a quote: https://antsremovals.co.uk/house-removal-survey/
+Request a quote: https://antsremovals.co.uk/get-quote-2/
 Email: office@antsremovals.co.uk
 Phone: 02088073721
 
