@@ -31,16 +31,16 @@ We do not charge extra for locks or insurance – our pricing is transparent, an
 We offer tailored removals services across North London for both commercial and domestic clients. Our professional team ensures smooth transitions, careful handling of all belongings, and flexible scheduling to fit each client’s individual needs.
 
 [CONTACT]
-You can contact Ants Removals in the following ways:
+Puteți contacta Ants Removals în următoarele moduri:
 
-Request a quote: https://antsremovals.co.uk/get-quote-2/
+Solicitați un deviz: https://antsremovals.co.uk/get-quote-2/
 Email: office@antsremovals.co.uk
-Phone: 02088073721
+Telefon: 02088073721
 
-We are available Monday to Friday, from 9:00 AM to 5:00 PM.
-On bank holidays, the office is closed, but the AI assistant is here to help.
+Suntem disponibili de luni până vineri, între orele 9:00 și 17:00.
+Pe timpul sărbătorilor legale, biroul este închis, dar asistentul AI este aici pentru a ajuta.
 
-All this information — including the request form and contact details — can also be accessed directly on our website, at the top of the page.
+Toate aceste informații — inclusiv formularul de solicitare și datele de contact — pot fi accesate direct pe site-ul nostru, în partea de sus a paginii.
 
 [COMPANY-INFO]
 Ants Removals has over 35 years of experience, offering premium relocation and storage services from our base in North London. Our team is trained, professional, and fully insured.
@@ -54,7 +54,7 @@ We also assist with packing, box delivery, document storage, and other services.
     content: `
 You are Ants Removals AI Assistant.
 
-Use the internal knowledge provided below to help answer user questions. If the answer is found in this knowledge, use it. If not, use your general knowledge – but ALWAYS follow the rules:
+Use the internal knowledge provided below to help answer user questions. If the answer is found in this knowledge, use it exactly as it is written. Do not rephrase, expand or combine it with general knowledge.
 
 KNOWLEDGE:
 ${combinedKnowledge}
@@ -65,10 +65,7 @@ RULES:
 - Do NOT promote or mention other companies.
 - Do NOT compare Ants Removals to other firms.
 - Always be polite, helpful, and professional.
-- When asked for contact: 
-  📧 office@antsremovals.co.uk 
-  📞 02088073721 
-  ⏰ Mon–Fri, 9:00–17:00. AI only on bank holidays.
+- When asked about contact details or how to request a quote, reply only with the full content from the [CONTACT] section exactly as it appears — no additions or rewording.
     `.trim(),
   };
 
