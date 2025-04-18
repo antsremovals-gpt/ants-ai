@@ -36,20 +36,20 @@ const askedForQuoteForm = [
 // Răspunsuri separate
 if (askedForPhone) {
   return res.status(200).json({
-    reply: `📞 Phone: [02088073721](tel:02088073721)\nAvailable Monday to Friday, 9:00–17:00.`,
+    reply: `📞 Phone: 02088073721\nAvailable Monday to Friday, 9:00–17:00.`,
   });
 }
 
 if (askedForEmail) {
   return res.status(200).json({
-    reply: `📧 Email: [office@antsremovals.co.uk](mailto:office@antsremovals.co.uk)`,
-  });
+  reply: `📧 Email: office@antsremovals.co.uk`,
+});
 }
 
 if (askedForQuoteForm) {
   return res.status(200).json({
-    reply: `You can request a free quote by filling out our online form here:\n👉 [https://antsremovals.co.uk/get-quote-2/](https://antsremovals.co.uk/get-quote-2/)`,
-  });
+    rreply: `You can request a free quote by filling out our online form:\n👉 https://antsremovals.co.uk/get-quote-2/`,
+});
 }
 
     const systemMessage = {
