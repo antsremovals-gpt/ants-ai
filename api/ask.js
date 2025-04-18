@@ -1,6 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -16,23 +13,42 @@ export default async function handler(req, res) {
     return;
   }
 
-  try {
-    const { messages } = req.body;
+  const { messages } = req.body;
 
-    // 🧠 Citește fișierele din folderul ai-knowledge
-    const knowledgeFolder = path.resolve('./ai-knowledge');
-    const knowledgeFiles = fs.readdirSync(knowledgeFolder);
-    let combinedKnowledge = '';
+  // 🧠 Conținutul static din fișierele tale
+  const combinedKnowledge = `
+[STORAGE]
+ANTS REMOVALS AND STORAGE IN WOODFORD
+HOW CAN WE HELP
+Book Now!
+Your Name(Required) Email(Required)
 
-    knowledgeFiles.forEach(file => {
-      const filePath = path.join(knowledgeFolder, file);
-      const content = fs.readFileSync(filePath, 'utf8');
-      combinedKnowledge += `\n\n[${file.replace('.txt', '').toUpperCase()}]\n${content}`;
-    });
+Phone(Required)Subject Message(Required)
+I understand/acknowledge that the controller of my personal data is Ants Removals Limited...
+Removals in Woodford
+Local Expertise and Dependability
+With over a decade of experience in East London, no other removals company offers the same level of trust, professionalism, and expertise as Ants Removals.
 
-    const systemMessage = {
-      role: "system",
-      content: `
+[REMOVALS]
+Commercial and Domestic Moving
+We offer tailored removals services across North London. Our professional team ensures smooth transitions, careful handling, and flexible scheduling...
+
+[CONTACT]
+Email: office@antsremovals.co.uk
+Phone: 02088073721
+Available: Monday to Friday, 9:00 – 17:00
+On bank holidays, the office is closed but the AI assistant is available to help you.
+
+[COMPANY-INFO]
+Ants Removals has over 35 years of experience, offering premium relocation and storage services from our base in North London.
+
+[MISC]
+We also assist with packing, box delivery, document storage, and more. Ask us if you have a special request – our team is here to help.
+  `.trim();
+
+  const systemMessage = {
+    role: "system",
+    content: `
 You are Ants Removals AI Assistant.
 
 Use the internal knowledge provided below to help answer user questions. If the answer is found in this knowledge, use it. If not, use your general knowledge – but ALWAYS follow the rules:
@@ -50,11 +66,12 @@ RULES:
   📧 office@antsremovals.co.uk 
   📞 02088073721 
   ⏰ Mon–Fri, 9:00–17:00. AI only on bank holidays.
-      `.trim(),
-    };
+    `.trim(),
+  };
 
-    const fullMessages = [systemMessage, ...messages];
+  const fullMessages = [systemMessage, ...messages];
 
+  try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -76,7 +93,6 @@ RULES:
     }
 
     res.status(200).json({ reply: data.choices[0].message.content });
-
   } catch (error) {
     console.error("Server error:", error);
     res.status(500).json({ error: "Something went wrong." });
