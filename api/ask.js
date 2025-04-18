@@ -18,32 +18,30 @@ export default async function handler(req, res) {
   // 🧠 Conținutul static din fișierele tale
   const combinedKnowledge = `
 [STORAGE]
-ANTS REMOVALS AND STORAGE IN WOODFORD
-HOW CAN WE HELP
-Book Now!
-Your Name(Required) Email(Required)
+Ants Removals offers secure, clean, and fully managed storage solutions for both short-term and long-term needs. Whether you're moving to a new home that's not yet ready or simply require extra space, we provide flexible storage options tailored to your situation.
 
-Phone(Required)Subject Message(Required)
-I understand/acknowledge that the controller of my personal data is Ants Removals Limited...
-Removals in Woodford
-Local Expertise and Dependability
-With over a decade of experience in East London, no other removals company offers the same level of trust, professionalism, and expertise as Ants Removals.
+We use standard wooden storage containers with an internal volume of approximately 250 cubic feet. The internal dimensions of each container are 7ft 2in (2.18m) long × 5ft (1.52m) wide × 7ft 8in (2.34m) high. These breathable wooden containers are dry, clean, and stackable up to 4 high using forklifts. They are ideal for both domestic and commercial storage.
+
+Each container is individually numbered for traceability and maximum security.
+
+Our facility features 24/7 CCTV surveillance and controlled indoor conditions to ensure your items remain dry and safe. Storage is available from as little as one week, with no maximum duration. Upon request, we can arrange the return delivery of your stored items.
+
+We do not charge extra for locks or insurance – our pricing is transparent, and customer satisfaction is a top priority.
 
 [REMOVALS]
-Commercial and Domestic Moving
-We offer tailored removals services across North London. Our professional team ensures smooth transitions, careful handling, and flexible scheduling...
+We offer tailored removals services across North London for both commercial and domestic clients. Our professional team ensures smooth transitions, careful handling of all belongings, and flexible scheduling to fit each client’s individual needs.
 
 [CONTACT]
-Email: office@antsremovals.co.uk
-Phone: 02088073721
-Available: Monday to Friday, 9:00 – 17:00
+Email: office@antsremovals.co.uk  
+Phone: 02088073721  
+Available: Monday to Friday, 9:00 – 17:00  
 On bank holidays, the office is closed but the AI assistant is available to help you.
 
 [COMPANY-INFO]
-Ants Removals has over 35 years of experience, offering premium relocation and storage services from our base in North London.
+Ants Removals has over 35 years of experience, offering premium relocation and storage services from our base in North London. Our team is trained, professional, and fully insured.
 
 [MISC]
-We also assist with packing, box delivery, document storage, and more. Ask us if you have a special request – our team is here to help.
+We also assist with packing, box delivery, document storage, and other services. If you have a specific request, feel free to ask – our team is happy to help.
   `.trim();
 
   const systemMessage = {
