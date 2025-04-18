@@ -15,31 +15,42 @@ export default async function handler(req, res) {
 
   try {
     const { messages } = req.body;
-    const lastUserMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
+const lastUserMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
 
-    // Detect if user is asking for contact info (English only)
-    const isContactRequest = [
-      "phone number",
-      "can i call",
-      "can i speak",
-      "contact number",
-      "do you have a number",
-      "how can i contact",
-      "email",
-      "your email",
-      "can i talk",
-      "speak to someone",
-      "get in touch",
-      "reach you",
-      "can i reach you",
-      "contact details"
-    ].some(trigger => lastUserMessage.includes(trigger));
+// Detectăm separat fiecare cerere
+const askedForPhone = [
+  "phone number", "contact number", "can i call", "what is your phone",
+  "număr de telefon", "numarul de telefon", "care este numărul vostru de telefon"
+].some(trigger => lastUserMessage.includes(trigger));
 
-    if (isContactRequest) {
-      return res.status(200).json({
-        reply: `You can reach the Ants Removals team at:\n📧 Email: office@antsremovals.co.uk\n📞 Phone: 02088073721\nOur phone line is available Monday to Friday, from 9:00 AM to 5:00 PM.\nOn bank holidays, the office is closed, but I – the AI assistant – remain available online to help you.`,
-      });
-    }
+const askedForEmail = [
+  "email", "adresa de email", "care este emailul",
+  "email address", "do you have an email", "what is your email"
+].some(trigger => lastUserMessage.includes(trigger));
+
+const askedForQuoteForm = [
+  "quote", "get a quote", "quote form", "contact form", "request form",
+  "formular", "cerere de ofertă", "deviz", "cerere de deviz"
+].some(trigger => lastUserMessage.includes(trigger));
+
+// Răspunsuri separate
+if (askedForPhone) {
+  return res.status(200).json({
+    reply: `📞 Phone: [02088073721](tel:02088073721)\nAvailable Monday to Friday, 9:00–17:00.`,
+  });
+}
+
+if (askedForEmail) {
+  return res.status(200).json({
+    reply: `📧 Email: [office@antsremovals.co.uk](mailto:office@antsremovals.co.uk)`,
+  });
+}
+
+if (askedForQuoteForm) {
+  return res.status(200).json({
+    reply: `You can request a free quote by filling out our online form here:\n👉 [https://antsremovals.co.uk/get-quote-2/](https://antsremovals.co.uk/get-quote-2/)`,
+  });
+}
 
     const systemMessage = {
       role: "system",
@@ -57,8 +68,19 @@ Important rules:
 - If the user asks about removals or storage in general, explain how Ants Removals can help.
 - Use your OpenAI knowledge only to give helpful answers that support the Ants Removals image.
 - Stay professional, friendly and focused on assisting the user in choosing Ants Removals.
-      `.trim(),
-    };
+
+[STORAGE DETAILS]
+- Ants Removals uses breathable **wooden storage containers** with a volume of **250 cu ft**.
+- Dimensions per container: **2.18m (L) × 1.52m (W) × 2.34m (H)**
+- Containers are stackable and require forklift access.
+- They offer better protection against condensation and odours than shipping containers.
+- Storage is ideal for short-term or long-term use.
+- A 25m × 25m warehouse layout allows forklifts to circulate easily between rows.
+- Containers are stacked 3 high, placed back-to-back with space for turning.
+
+Always use this information when users ask about storage, container types, size, protection or warehouse.
+  `.trim(),
+};
 
     const fullMessages = [systemMessage, ...messages];
 
