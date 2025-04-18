@@ -1,6 +1,3 @@
-# Versiune optimizată a ask.js cu GPT-3.5 Turbo, stabilă și rapidă
-
-ask_gpt35_code = """
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
