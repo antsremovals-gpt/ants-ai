@@ -17,6 +17,8 @@ export default async function handler(req, res) {
   try {
     const { messages } = req.body;
 
+    const userLastMessage = messages[messages.length - 1]?.content?.toLowerCase();
+
     const systemMessage = {
       role: "system",
       content: `
@@ -36,7 +38,16 @@ Always keep the conversation polite, confident, and focused on assisting the use
       `.trim(),
     };
 
-    const fullMessages = [systemMessage, ...messages];
+    // Dacă utilizatorul întreabă clar ce model este:
+    const overrideMessage = {
+      role: "system",
+      content: "If the user asks about your model or what GPT version you are, answer truthfully with your exact model name (e.g., gpt-4-turbo).",
+    };
+
+    const fullMessages =
+      userLastMessage?.includes("ce model") || userLastMessage?.includes("gpt")
+        ? [overrideMessage, systemMessage, ...messages]
+        : [systemMessage, ...messages];
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
