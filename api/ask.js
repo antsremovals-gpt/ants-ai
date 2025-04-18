@@ -15,7 +15,6 @@ export default async function handler(req, res) {
 
   const { messages } = req.body;
 
-  // 🧠 Conținutul static din fișierele tale
   const combinedKnowledge = `
 [STORAGE]
 Ants Removals offers secure, clean, and fully managed storage solutions for both short-term and long-term needs. Whether you're moving to a new home that's not yet ready or simply require extra space, we provide flexible storage options tailored to your situation.
@@ -32,13 +31,12 @@ We do not charge extra for locks or insurance – our pricing is transparent, an
 We offer tailored removals services across North London for both commercial and domestic clients. Our professional team ensures smooth transitions, careful handling of all belongings, and flexible scheduling to fit each client’s individual needs.
 
 [CONTACT]
-You can easily reach out to us or fill in our online request form.
+You can easily reach out to us or fill in our online request form:
 
-📋 To request a quote, please use our online form: https://antsremovals.co.uk/house-removal-survey/
-
-📧 Email: [office@antsremovals.co.uk](mailto:office@antsremovals.co.uk)  
-📞 Phone: [02088073721](tel:02088073721)  
-🕒 Available: Monday to Friday, 9:00 – 17:00  
+📋 <a href="https://antsremovals.co.uk/house-removal-survey/" target="_blank">Request a quote online</a><br>
+📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>
+📞 <a href="tel:02088073721">02088073721</a><br>
+🕒 Available: Monday to Friday, 9:00 – 17:00<br>
 On bank holidays, the office is closed but the AI assistant is available to help you.
 
 [COMPANY-INFO]
