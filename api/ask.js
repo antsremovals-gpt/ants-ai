@@ -1,3 +1,6 @@
+# Versiune optimizată a ask.js cu GPT-3.5 Turbo, stabilă și rapidă
+
+ask_gpt35_code = """
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -17,7 +20,6 @@ export default async function handler(req, res) {
     const { messages } = req.body;
     const lastUserMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
 
-    // Detect if user is asking for contact info (English only)
     const isContactRequest = [
       "phone number",
       "can i call",
@@ -43,7 +45,7 @@ export default async function handler(req, res) {
 
     const systemMessage = {
       role: "system",
-      content: `
+      content: \`
 You are Ants Removals AI Assistant.
 
 Your job is to help users with any questions related to moving, storage, packing, and relocation services. You must always be polite, helpful, and human-like in your tone.
@@ -56,8 +58,16 @@ Important rules:
 - Always represent Ants Removals as reliable, professional, and experienced.
 - If the user asks about removals or storage in general, explain how Ants Removals can help.
 - Use your OpenAI knowledge only to give helpful answers that support the Ants Removals image.
-- Stay professional, friendly and focused on assisting the user in choosing Ants Removals.
-      `.trim(),
+- Speak in a calm, conversational tone. Never say “Thinking...”.
+- If you do not know the answer, say so politely and suggest the user contacts the office if needed.
+- Do NOT suggest calling or emailing unless user clearly asks for contact.
+
+Ants Removals offers:
+• House & office removals
+• Container storage – 250 cu ft breathable wooden containers (2.18m x 1.52m x 2.34m)
+• Packing services and box delivery
+• Secure indoor warehouse with CCTV
+      \`.trim(),
     };
 
     const fullMessages = [systemMessage, ...messages];
@@ -69,7 +79,7 @@ Important rules:
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4-turbo",
+        model: "gpt-3.5-turbo",
         messages: fullMessages,
         temperature: 0.7,
       }),
@@ -89,3 +99,11 @@ Important rules:
     res.status(500).json({ error: "Something went wrong." });
   }
 }
+"""
+
+# Salvăm fișierul ca alternativă GPT-3.5
+gpt35_path = "/mnt/data/ask-gpt35.js"
+with open(gpt35_path, "w", encoding="utf-8") as f:
+    f.write(ask_gpt35_code)
+
+gpt35_path
