@@ -48,7 +48,7 @@ if (askedForEmail) {
 
 if (askedForQuoteForm) {
   return res.status(200).json({
-    rreply: `You can request a free quote by filling out our online form:\n👉 https://antsremovals.co.uk/get-quote-2/`,
+    reply: `You can request a free quote by filling out our online form:\n👉 https://antsremovals.co.uk/get-quote-2/`,
 });
 }
 
