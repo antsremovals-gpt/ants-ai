@@ -31,14 +31,16 @@ We do not charge extra for locks or insurance – our pricing is transparent, an
 We offer tailored removals services across North London for both commercial and domestic clients. Our professional team ensures smooth transitions, careful handling of all belongings, and flexible scheduling to fit each client’s individual needs.
 
 [CONTACT]
-You can contact us in the following ways:
+You can contact Ants Removals in the following ways:
 
-📋 Request a quote: https://antsremovals.co.uk/house-removal-survey/
-📧 Email: office@antsremovals.co.uk
-📞 Phone: 02088073721
+Request a quote: https://antsremovals.co.uk/house-removal-survey/
+Email: office@antsremovals.co.uk
+Phone: 02088073721
 
-We’re available Monday to Friday, 9:00 – 17:00.
-On bank holidays, the office is closed but the AI assistant is here to help.
+We are available Monday to Friday, from 9:00 AM to 5:00 PM.
+On bank holidays, the office is closed, but the AI assistant is here to help.
+
+All this information — including the request form and contact details — can also be accessed directly on our website, at the top of the page.
 
 [COMPANY-INFO]
 Ants Removals has over 35 years of experience, offering premium relocation and storage services from our base in North London. Our team is trained, professional, and fully insured.
