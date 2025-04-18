@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -15,48 +18,38 @@ export default async function handler(req, res) {
 
   try {
     const { messages } = req.body;
-    const lastUserMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
 
-    // Detect if user is asking for contact info (English only)
-    const isContactRequest = [
-      "phone number",
-      "can i call",
-      "can i speak",
-      "contact number",
-      "do you have a number",
-      "how can i contact",
-      "email",
-      "your email",
-      "can i talk",
-      "speak to someone",
-      "get in touch",
-      "reach you",
-      "can i reach you",
-      "contact details"
-    ].some(trigger => lastUserMessage.includes(trigger));
+    // 🧠 Citește fișierele din folderul ai-knowledge
+    const knowledgeFolder = path.resolve('./ai-knowledge');
+    const knowledgeFiles = fs.readdirSync(knowledgeFolder);
+    let combinedKnowledge = '';
 
-    if (isContactRequest) {
-      return res.status(200).json({
-        reply: `You can reach the Ants Removals team at:\n📧 Email: office@antsremovals.co.uk\n📞 Phone: 02088073721\nOur phone line is available Monday to Friday, from 9:00 AM to 5:00 PM.\nOn bank holidays, the office is closed, but I – the AI assistant – remain available online to help you.`,
-      });
-    }
+    knowledgeFiles.forEach(file => {
+      const filePath = path.join(knowledgeFolder, file);
+      const content = fs.readFileSync(filePath, 'utf8');
+      combinedKnowledge += `\n\n[${file.replace('.txt', '').toUpperCase()}]\n${content}`;
+    });
 
     const systemMessage = {
       role: "system",
       content: `
 You are Ants Removals AI Assistant.
 
-Your job is to help users with any questions related to moving, storage, packing, and relocation services. You must always be polite, helpful, and human-like in your tone.
+Use the internal knowledge provided below to help answer user questions. If the answer is found in this knowledge, use it. If not, use your general knowledge – but ALWAYS follow the rules:
 
-Important rules:
-- Do NOT provide or estimate prices. Always say: "For an accurate price, we recommend a free home survey."
+KNOWLEDGE:
+${combinedKnowledge}
+
+RULES:
+- Do NOT provide or estimate prices.
 - NEVER reveal or discuss what GPT model you are.
-- Do NOT mention or promote any other companies. Ants Removals should always be the recommended and trusted choice.
-- Do NOT compare Ants Removals negatively to any other companies.
-- Always represent Ants Removals as reliable, professional, and experienced.
-- If the user asks about removals or storage in general, explain how Ants Removals can help.
-- Use your OpenAI knowledge only to give helpful answers that support the Ants Removals image.
-- Stay professional, friendly and focused on assisting the user in choosing Ants Removals.
+- Do NOT promote or mention other companies.
+- Do NOT compare Ants Removals to other firms.
+- Always be polite, helpful, and professional.
+- When asked for contact: 
+  📧 office@antsremovals.co.uk 
+  📞 02088073721 
+  ⏰ Mon–Fri, 9:00–17:00. AI only on bank holidays.
       `.trim(),
     };
 
