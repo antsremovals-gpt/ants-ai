@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -16,38 +15,52 @@ export default async function handler(req, res) {
 
   try {
     const { messages } = req.body;
+    const lastUserMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
 
-    const userLastMessage = messages[messages.length - 1]?.content?.toLowerCase();
+    // Detect if user is asking for contact info (English only)
+    const isContactRequest = [
+      "phone number",
+      "can i call",
+      "can i speak",
+      "contact number",
+      "do you have a number",
+      "how can i contact",
+      "email",
+      "your email",
+      "can i talk",
+      "speak to someone",
+      "get in touch",
+      "reach you",
+      "can i reach you",
+      "contact details"
+    ].some(trigger => lastUserMessage.includes(trigger));
+
+    if (isContactRequest) {
+      return res.status(200).json({
+        reply: `You can reach the Ants Removals team at:\n📧 Email: office@antsremovals.co.uk\n📞 Phone: 02088073721\nOur phone line is available Monday to Friday, from 9:00 AM to 5:00 PM.\nOn bank holidays, the office is closed, but I – the AI assistant – remain available online to help you.`,
+      });
+    }
 
     const systemMessage = {
       role: "system",
       content: `
 You are Ants Removals AI Assistant.
 
-Your job is to help users with any questions related to moving, storage, packing, and relocation services. You have access to OpenAI's general knowledge and should answer questions professionally and helpfully.
+Your job is to help users with any questions related to moving, storage, packing, and relocation services. You must always be polite, helpful, and human-like in your tone.
 
-However, you MUST follow these important rules at all times:
-- Do NOT provide or estimate prices. If asked about cost, say: "For an accurate price, we recommend a free home survey."
+Important rules:
+- Do NOT provide or estimate prices. Always say: "For an accurate price, we recommend a free home survey."
+- NEVER reveal or discuss what GPT model you are.
 - Do NOT mention or promote any other companies. Ants Removals should always be the recommended and trusted choice.
-- Do NOT compare Ants Removals negatively to other companies.
+- Do NOT compare Ants Removals negatively to any other companies.
 - Always represent Ants Removals as reliable, professional, and experienced.
 - If the user asks about removals or storage in general, explain how Ants Removals can help.
-- You are allowed to use your knowledge from OpenAI to give helpful answers, as long as they do not contradict or damage the Ants Removals image.
-
-Always keep the conversation polite, confident, and focused on assisting the user in choosing Ants Removals.
+- Use your OpenAI knowledge only to give helpful answers that support the Ants Removals image.
+- Stay professional, friendly and focused on assisting the user in choosing Ants Removals.
       `.trim(),
     };
 
-    // Dacă utilizatorul întreabă clar ce model este:
-    const overrideMessage = {
-      role: "system",
-      content: "If the user asks about your model or what GPT version you are, answer truthfully with your exact model name (e.g., gpt-4-turbo).",
-    };
-
-    const fullMessages =
-      userLastMessage?.includes("ce model") || userLastMessage?.includes("gpt")
-        ? [overrideMessage, systemMessage, ...messages]
-        : [systemMessage, ...messages];
+    const fullMessages = [systemMessage, ...messages];
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -58,13 +71,21 @@ Always keep the conversation polite, confident, and focused on assisting the use
       body: JSON.stringify({
         model: "gpt-4-turbo",
         messages: fullMessages,
+        temperature: 0.7,
       }),
     });
 
     const data = await response.json();
+
+    if (!response.ok) {
+      console.error("OpenAI API Error:", data);
+      return res.status(500).json({ error: "OpenAI error: " + data.error.message });
+    }
+
     res.status(200).json({ reply: data.choices[0].message.content });
+
   } catch (error) {
-    console.error("OpenAI Error:", error);
+    console.error("Server error:", error);
     res.status(500).json({ error: "Something went wrong." });
   }
 }
