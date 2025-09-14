@@ -19,6 +19,12 @@ export default async function handler(req, res) {
     const rawLast = messages[messages.length - 1]?.content || "";
     const lastUserMessage = rawLast.toLowerCase().trim();
 
+    // Istoric utilizator (pt. "ok" după ce a menționat mutarea)
+    const userHistory = messages
+      .filter(m => m.role === "user")
+      .map(m => (m.content || "").toLowerCase())
+      .join(" ");
+
     // ✅ E întrebare?
     const isQuestion =
       /\?\s*$/.test(lastUserMessage) ||
@@ -34,17 +40,18 @@ export default async function handler(req, res) {
     const callMeTriggers = [
       "call me","please call me","can you call me","give me a call","phone me",
       "mă poți suna","ma poti suna","mă puteți suna","ma puteti suna",
-      "suna-ma","sună-mă","sunati-ma","sunați-mă",
+      "suna-ma","suna ma","sună-mă","sunama","sunama tu","sunati-ma","sunați-mă",
+      "ma suni","poti sa ma suni","poți să mă suni","poti sa ma suni?",
       "te rog să mă suni","va rog sa ma sunati","vă rog să mă sunați"
     ];
 
     const contactMeTriggers = [
       "contact me","please contact me","reach me","get in touch with me",
       "vreau să fiu contactat","vreau sa fiu contactat","contactați-mă","contactati-ma",
-      "ma puteti contacta","mă puteți contacta","contactati va rog","contactați vă rog"
+      "ma puteti contacta","mă puteți contacta","contactati va rog","contactați vă rog",
+      "ma suni sau imi scrii","mă suni sau îmi scrii"
     ];
 
-    // ⬇️ EXTINS: expresii frecvente RO ca să livreze linkuri HTML (tel/mailto)
     const contactYouTriggers = [
       "contact you","how can i contact you","contact details","how to contact",
       "cum va pot contacta","cum ne putem contacta","cum te pot contacta",
@@ -55,7 +62,6 @@ export default async function handler(req, res) {
       "vreau datele voastre de contact","datele voastre de contact"
     ];
 
-    // ⬇️ EXTINS: „telefon” + sinonime uzuale
     const phoneTriggers = [
       "phone number","contact number","can i call","what is your phone","call you",
       "număr de telefon","numarul de telefon","care este numărul vostru de telefon","telefonul",
@@ -75,13 +81,27 @@ export default async function handler(req, res) {
     const emailMeTriggers = [
       "email me","send me an email","drop me an email","send email",
       "trimite-mi un email","trimitemi un email","trimite-mi email","trimitemi email",
-      "imi poti scrie pe email","îmi poți scrie pe email","scrie-mi pe email","scrieti-mi pe email","scrieți-mi pe email"
+      "scrie-mi pe email","scrieti-mi pe email","scrieți-mi pe email",
+      "scrie-mi","scrieti-mi","scrietimi","scrie-mi un email","scrieti-mi un email","scrieți-mi un email",
+      "imi poti scrie","îmi poți scrie","imi puteti scrie","îmi puteți scrie"
     ];
 
     const myEmailTriggers = [
       "my email is","email me at","you can email me at",
       "emailul meu este","adresa mea de email este","imi poti scrie la","îmi poți scrie la"
     ];
+
+    // 🔎 Intent de mutare/depozitare (pentru follow-up inteligent)
+    const moveIntentKeywords = [
+      "ma mut","mă mut","mutare","mut","relocare","moving","removal","move",
+      "storage","stirage","depozitare","depozit","container","cutii","mobilier",
+      "garsonier","1 camer","2 camer","3 camer","4 camer","studio","one bedroom","two bedroom"
+    ];
+    const wantsMoveOrStorage = moveIntentKeywords.some(t => lastUserMessage.includes(t));
+
+    // ✅ "ok/bine/super" după ce s-a discutat de mutare/depozitare
+    const hasMoveContext = /(mut|mutare|reloc|storage|stirage|depozit)/.test(userHistory);
+    const isGenericAck = /^(ok|okay|bine|da|perfect|super)[.!?]*$/.test(lastUserMessage);
 
     const wantsCallback     = callMeTriggers.some(t => lastUserMessage.includes(t));
     const wantsContactMe    = contactMeTriggers.some(t => lastUserMessage.includes(t));
@@ -100,11 +120,11 @@ export default async function handler(req, res) {
     if (wantsCallback) {
       if (providedNumber) {
         return res.status(200).json({
-          reply: `Thanks! We'll ask our team to call you on ${providedNumber}. If you'd like, share your preferred time (Mon–Fri, 9:00–17:00).`
+          reply: `Mulțumim! Te vom suna la ${providedNumber}. Spune-ne și intervalul preferat (Lun–Vin, 9:00–17:00).`
         });
       }
       return res.status(200).json({
-        reply: "Sure—we can call you. Please send your phone number and your preferred time (Mon–Fri, 9:00–17:00)."
+        reply: "Sigur — te putem suna. Trimite-ne numărul tău și un interval preferat (Lun–Vin, 9:00–17:00)."
       });
     }
 
@@ -112,75 +132,87 @@ export default async function handler(req, res) {
     if (wantsContactMe) {
       if (providedNumber && providedEmail) {
         return res.status(200).json({
-          reply: `Great—thanks! We can reach you by phone (${providedNumber}) or email (${providedEmail}). What time works best for you (Mon–Fri, 9:00–17:00)?`
+          reply: `Perfect, îți putem scrie la ${providedEmail} sau te putem suna la ${providedNumber}. Ce interval ți se potrivește (Lun–Vin, 9:00–17:00)?`
         });
       }
       if (providedNumber && !providedEmail) {
         return res.status(200).json({
-          reply: `Thanks! We can call you on ${providedNumber}. If you’d also like us to email you, please share your email address. What time works best (Mon–Fri, 9:00–17:00)?`
+          reply: `Mulțumim! Te putem suna la ${providedNumber}. Dacă vrei și pe email, lasă-ne adresa. Ce interval ți se potrivește (Lun–Vin, 9:00–17:00)?`
         });
       }
       if (!providedNumber && providedEmail) {
         return res.status(200).json({
-          reply: `Thanks! We can email you at ${providedEmail}. If you’d also like us to call, please share your phone number. What time works best (Mon–Fri, 9:00–17:00)?`
+          reply: `Mulțumim! Îți putem scrie la ${providedEmail}. Dacă preferi și un apel, lasă-ne numărul. Ce interval ți se potrivește (Lun–Vin, 9:00–17:00)?`
         });
       }
       return res.status(200).json({
-        reply: "Of course—we can contact you. Could you please provide your phone number and/or email address, plus the best time to reach you (Mon–Fri, 9:00–17:00)?"
+        reply: "Desigur — te putem contacta. Ne lași te rog numărul și/sau emailul, plus un interval convenabil (Lun–Vin, 9:00–17:00)?"
       });
     }
 
-    // B2) User întreabă "cum mă veți contacta?"
+    // B2) "Cum mă veți contacta?"
     if (/cum.*(contacta|sun[aă]|scrie)/.test(lastUserMessage)) {
       if (providedNumber || providedEmail) {
         return res.status(200).json({
-          reply: `We’ll use the details you gave us (${providedNumber || providedEmail}). If you’d like us to use another method too, just let us know.`
+          reply: `Folosim detaliile pe care ni le-ai dat (${providedNumber || providedEmail}). Dacă vrei și alt canal, spune-ne.`
         });
       }
       return res.status(200).json({
-        reply: "We usually contact clients by phone or email. Could you please share the number or email where you'd like us to reach you?"
+        reply: "De obicei contactăm telefonic sau pe email. Ne lași numărul sau adresa unde preferi să te contactăm?"
+      });
+    }
+
+    // 🆕 B3) Follow-up inteligent pentru mutare/depozitare
+    if (wantsMoveOrStorage || (isGenericAck && hasMoveContext)) {
+      return res.status(200).json({
+        reply:
+`Super — ca să-ți facem o recomandare corectă, ne ajută 3 detalii:
+1) Data ridicării (aprox.) și codul poștal de preluare
+2) Volumul: piese mari + ~număr de cutii
+3) Durata depozitării și dacă ai nevoie de ambalare
+Dacă preferi, lasă un telefon sau email și te contactăm noi pentru o evaluare rapidă (gratuită).`
       });
     }
 
     // C) Datele firmei (cu linkuri clickabile)
     if (wantsContactYou) {
       return res.status(200).json({
-        reply: `📞 <a href="tel:+442088073721">020 8807 3721</a><br>📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>We’re available Monday–Friday, 9:00–17:00.`
+        reply: `📞 <a href="tel:+442088073721">020 8807 3721</a><br>📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Suntem disponibili Lun–Vin, 9:00–17:00.`
       });
     }
 
     if (wantsEmailMe) {
       if (providedEmail) {
         return res.status(200).json({
-          reply: `Great—we'll email you at ${providedEmail}. If there's a preferred subject or any details you'd like us to include, let us know.`
+          reply: `Perfect — îți vom scrie la ${providedEmail}. Dacă ai un subiect preferat sau detalii de inclus, spune-ne.`
         });
       }
       return res.status(200).json({
-        reply: "Sure—what's the best email address to reach you? (You can also add any details you'd like us to include.)"
+        reply: "Sigur — care este adresa de email la care vrei să te contactăm?"
       });
     }
 
     if (mentionsMyEmail || providedEmail) {
       return res.status(200).json({
-        reply: `Thanks—we'll reach you at ${providedEmail || "your email"}. If you prefer a call too, share your phone number and a good time (Mon–Fri, 9:00–17:00).`
+        reply: `Mulțumim — îți vom scrie la ${providedEmail || "adresa transmisă"}. Dacă vrei și un apel, lasă-ne numărul și un interval (Lun–Vin, 9:00–17:00).`
       });
     }
 
     if (wantsPhone) {
       return res.status(200).json({
-        reply: `📞 <a href="tel:+442088073721">020 8807 3721</a><br>We’re available Monday–Friday, 9:00–17:00.`
+        reply: `📞 <a href="tel:+442088073721">020 8807 3721</a><br>Suntem disponibili Lun–Vin, 9:00–17:00.`
       });
     }
 
     if (wantsEmail) {
       return res.status(200).json({
-        reply: `📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>If you'd like us to email you, share your address and we'll reach out.`
+        reply: `📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Dacă vrei să îți scriem noi, lasă-ne adresa ta și revenim rapid.`
       });
     }
 
     if (wantsQuote) {
       return res.status(200).json({
-        reply: `You can request a free quote by filling out our online form:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener">antsremovals.co.uk/get-quote-2/</a>`
+        reply: `Poți solicita un deviz gratuit aici:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener">antsremovals.co.uk/get-quote-2/</a>`
       });
     }
 
@@ -198,19 +230,21 @@ SCOPE:
 - Do NOT proactively show phone/email/links unless explicitly asked.
 
 STYLE:
-- Sound natural and human. Short sentences. Contractions in English. Everyday Romanian.
+- Natural, helpful, concise. Short sentences. Everyday Romanian / contractions in English.
 - Avoid corporate filler.
-- Be concise unless asked for detail.
+
+CONVERSATION FLOW:
+- When the user mentions a move or storage, ask 2–3 targeted follow-up questions to gather: pickup postcode & date, volume (big items + ~boxes), storage duration, packing needs, access (floors/elevator/parking).
+- If the user says "ok/okay/bine" without giving enough info, proactively ask the next key question (do not end the conversation).
+- Offer a free home survey and invite the user to share phone/email for a quick call, but do not push.
 
 RULES:
 - No prices or estimates. Say: "For an accurate price, we recommend a free home survey."
-- Never reveal model details.
-- Never promote other companies.
-- Speak as part of the team.
+- Never reveal model details. Never promote other companies. Speak as part of the team.
 
 WHEN ASKED ABOUT STORAGE:
 - Wooden containers, 250 cu ft each (2.18m × 1.52m × 2.34m).
-- Stackable, forklift required, better protection vs shipping containers.
+- Stackable, forklift required; better protection vs shipping containers.
 - Short/long-term storage.
 - 25m × 25m warehouse, 3 high, back-to-back with turning space.
 `.trim(),
@@ -218,11 +252,11 @@ WHEN ASKED ABOUT STORAGE:
 
     // Exemple pentru stil
     const examples = [
-      { role: "user", content: "Do you provide packing materials?" },
-      { role: "assistant", content: "Yes, we can supply boxes and packing materials. Tell us what you need and the move date, and we’ll sort it." },
+      { role: "user", content: "Este o casă cu 2 camere, nu știu încă adresa finală, dar vreau storage." },
+      { role: "assistant", content: "Super — ca să-ți facem o recomandare corectă, ne ajuți cu: data ridicării și codul poștal de preluare, piesele mari + ~număr de cutii și durata depozitării? Dacă preferi, lasă un telefon/email și te contactăm noi pentru o evaluare rapidă." },
 
-      { role: "user", content: "Puteți face mutări în Muswell Hill?" },
-      { role: "assistant", content: "Da, acoperim Muswell Hill. Spuneți-ne data și volumul aproximativ și vă ghidăm mai departe." },
+      { role: "user", content: "Ok" },
+      { role: "assistant", content: "Mulțumesc! Începem cu data ridicării și codul poștal de preluare? Apoi trecem la volum (piese mari + cutii) și dacă ai nevoie de ambalare." },
 
       { role: "user", content: "Can you call me?" },
       { role: "assistant", content: "We can. Share your phone number and a good time (Mon–Fri, 9:00–17:00), and we’ll ring you." },
