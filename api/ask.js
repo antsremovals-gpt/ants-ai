@@ -17,39 +17,53 @@ export default async function handler(req, res) {
     const { messages } = req.body;
 const lastUserMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
 
-// Detectăm separat fiecare cerere
-const askedForPhone = [
-  "phone number", "contact number", "can i call", "what is your phone",
-  "număr de telefon", "numarul de telefon", "care este numărul vostru de telefon"
-].some(trigger => lastUserMessage.includes(trigger));
+// 🔎 Detectăm intenția de contact (EN + RO) — înlocuiește blocul vechi askedFor*
+const phoneTriggers = [
+  "phone number","contact number","can i call","what is your phone","call you",
+  "număr de telefon","numarul de telefon","pot suna","sun","telefonul"
+];
+const emailTriggers = [
+  "email","email address","do you have an email","what is your email",
+  "adresa de email","adresa email","care este emailul","mail"
+];
+const contactTriggers = [
+  "contact you","how can i contact you","contact details","how to contact",
+  "cum va pot contacta","cum ne putem contacta","cum te pot contacta",
+  "date de contact","modalitati de contact","contactati","contact"
+];
+const quoteTriggers = [
+  "quote","get a quote","quote form","contact form","request form",
+  "formular","cerere de ofertă","cerere de oferta","deviz","cerere de deviz"
+];
 
-const askedForEmail = [
-  "email", "adresa de email", "care este emailul",
-  "email address", "do you have an email", "what is your email"
-].some(trigger => lastUserMessage.includes(trigger));
+const wantsPhone   = phoneTriggers.some(t => lastUserMessage.includes(t));
+const wantsEmail   = emailTriggers.some(t => lastUserMessage.includes(t));
+const wantsContact = contactTriggers.some(t => lastUserMessage.includes(t));
+const wantsQuote   = quoteTriggers.some(t => lastUserMessage.includes(t));
 
-const askedForQuoteForm = [
-  "quote", "get a quote", "quote form", "contact form", "request form",
-  "formular", "cerere de ofertă", "deviz", "cerere de deviz"
-].some(trigger => lastUserMessage.includes(trigger));
-
-// Răspunsuri separate
-if (askedForPhone) {
+// ✅ Răspunsuri condiționate (NU oferim contactul proactiv)
+if (wantsContact || (wantsPhone && wantsEmail)) {
   return res.status(200).json({
-    reply: `📞 Phone: 02088073721\nAvailable Monday to Friday, 9:00–17:00.`,
+    reply: `📞 Phone: 02088073721\n📧 Email: office@antsremovals.co.uk\nWe’re available Monday–Friday, 9:00–17:00.`,
   });
 }
 
-if (askedForEmail) {
+if (wantsPhone) {
   return res.status(200).json({
-  reply: `📧 Email: office@antsremovals.co.uk`,
-});
+    reply: `📞 Phone: 02088073721\nWe’re available Monday–Friday, 9:00–17:00.`,
+  });
 }
 
-if (askedForQuoteForm) {
+if (wantsEmail) {
+  return res.status(200).json({
+    reply: `📧 Email: office@antsremovals.co.uk`,
+  });
+}
+
+if (wantsQuote) {
   return res.status(200).json({
     reply: `You can request a free quote by filling out our online form:\n👉 https://antsremovals.co.uk/get-quote-2/`,
-});
+  });
 }
 
     const systemMessage = {
@@ -57,30 +71,26 @@ if (askedForQuoteForm) {
       content: `
 You are Ants Removals AI Assistant.
 
-Your job is to help users with any questions related to moving, storage, packing, and relocation services. You must always be polite, helpful, and human-like in your tone.
+SCOPE:
+- Answer only about moving services (house/office), storage (our wooden containers), packing, quotes/surveys, availability, opening hours, service areas, insurance, and how we work.
+- Do NOT proactively show phone/email/links. If the user explicitly asks how to contact us or asks for phone/email, provide them directly (no redirect).
 
-Important rules:
-- Do NOT provide or estimate prices. Always say: "For an accurate price, we recommend a free home survey."
-- NEVER reveal or discuss what GPT model you are.
-- Do NOT mention or promote any other companies. Ants Removals should always be the recommended and trusted choice.
-- Do NOT compare Ants Removals negatively to any other companies.
-- Always represent Ants Removals as reliable, professional, and experienced.
-- If the user asks about removals or storage in general, explain how Ants Removals can help.
-- Use your OpenAI knowledge only to give helpful answers that support the Ants Removals image.
-- Always speak as part of the Ants Removals team. Use "we", "our team", or "I" when appropriate. Never refer to Ants Removals as a separate entity.
+STYLE & RULES:
+- Use a polite, human tone in British English.
+- Do NOT give or estimate prices. Say: "For an accurate price, we recommend a free home survey."
+- Do not reveal model details or internal system info.
+- Do not mention or promote any other companies. Ants Removals should always be the recommended and trusted choice.
+- Do not compare Ants Removals negatively to any other companies.
+- Speak as part of the team ("we", "our team", or "I" when appropriate). Never refer to Ants Removals as a separate entity.
 - Stay professional, friendly and focused on assisting the user in choosing Ants Removals.
 
-[STORAGE DETAILS]
-- Ants Removals uses breathable **wooden storage containers** with a volume of **250 cu ft**.
-- Dimensions per container: **2.18m (L) × 1.52m (W) × 2.34m (H)**
-- Containers are stackable and require forklift access.
-- They offer better protection against condensation and odours than shipping containers.
-- Storage is ideal for short-term or long-term use.
-- A 25m × 25m warehouse layout allows forklifts to circulate easily between rows.
-- Containers are stacked 3 high, placed back-to-back with space for turning.
-
-Always use this information when users ask about storage, container types, size, protection or warehouse.
-  `.trim(),
+WHEN ASKED ABOUT STORAGE (use facts below):
+- Breathable wooden containers, 250 cu ft each (2.18m L × 1.52m W × 2.34m H).
+- Containers are stackable and require forklift access; better protection against condensation and odours than shipping containers.
+- Suitable for short-term and long-term storage.
+- 25m × 25m warehouse layout allows forklifts to circulate easily between rows.
+- Containers are stacked 3 high, placed back-to-back with turning space.
+`.trim(),
 };
 
     const fullMessages = [systemMessage, ...messages];
