@@ -15,15 +15,13 @@ export default async function handler(req, res) {
 
   try {
     const { messages } = req.body;
-
-    // ───────────────────────────────────────────────
-    // DETECTĂM INTENȚII LEGATE DE CONTACT
-    // ───────────────────────────────────────────────
     const lastUserMessageRaw = messages[messages.length - 1]?.content || "";
     const lastUserMessage = lastUserMessageRaw.toLowerCase();
 
-    const isRo = /[ăâîșț]/i.test(lastUserMessageRaw) || /(mutare|depozit|ofertă|telefon|email|bun[ăa]|salut)/i.test(lastUserMessage);
+    // Limba aproximativă pentru mesajele standard
+    const isRo = /[ăâîșț]/i.test(lastUserMessageRaw) || /(mutare|depozit|ofertă|pret|preț|telefon|email|bun[ăa]|salut)/i.test(lastUserMessage);
 
+    // Detectăm separat fiecare cerere
     const askedForPhone = [
       "phone number",
       "contact number",
@@ -34,7 +32,7 @@ export default async function handler(req, res) {
       "care este numărul vostru de telefon",
       "care este numarul vostru de telefon",
       "telefonul",
-      "telefon"
+      "telefon",
     ].some((t) => lastUserMessage.includes(t));
 
     const askedForEmail = [
@@ -45,7 +43,7 @@ export default async function handler(req, res) {
       "do you have an email",
       "what is your email",
       "mail",
-      "e-mail"
+      "e-mail",
     ].some((t) => lastUserMessage.includes(t));
 
     const askedForQuoteForm = [
@@ -58,7 +56,7 @@ export default async function handler(req, res) {
       "cerere de ofertă",
       "cerere de oferta",
       "deviz",
-      "cerere de deviz"
+      "cerere de deviz",
     ].some((t) => lastUserMessage.includes(t));
 
     const askedForContactGeneric = [
@@ -71,16 +69,46 @@ export default async function handler(req, res) {
       "date de contact",
       "cum va contactez",
       "vreau sa va contactez",
-      "vreau să vă contactez"
+      "vreau să vă contactez",
     ].some((t) => lastUserMessage.includes(t));
 
-    // Detectăm dacă utilizatorul NE-A LĂSAT un contact
+    // Utilizatorul a lăsat deja contact
     const phoneRegex = /(\+?\d[\d\s().-]{7,}\d)/;
     const emailRegex = /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i;
     const providedPhone = lastUserMessageRaw.match(phoneRegex)?.[0];
     const providedEmail = lastUserMessageRaw.match(emailRegex)?.[0];
 
-    // Răspunsuri DIRECTE pentru contact (cu linkuri clickabile)
+    // 🔎 A întrebat DESPRE PREȚ / COST?
+    const askedAboutPrice = (
+      [
+        "price",
+        "cost",
+        "how much",
+        "how much is",
+        "how much does",
+        "estimate",
+        "estimation",
+        "quotation",
+        "quote",
+        "ballpark",
+        "rough price",
+        "pret",
+        "preț",
+        "cat costa",
+        "cât costă",
+        "costa",
+        "estimare",
+        "deviz",
+        "oferta de pret",
+        "ofertă de preț",
+        "tarif",
+        "tarife",
+      ].some((t) => lastUserMessage.includes(t))
+    ) || /\b(£|gbp)\s*\d/i.test(lastUserMessage);
+
+    // ——————————————————————————————————————
+    // Răspunsuri separate pentru contact (cu linkuri clickabile)
+    // ——————————————————————————————————————
     if (providedPhone || providedEmail) {
       const x = providedEmail || providedPhone;
       return res.status(200).json({
@@ -94,15 +122,13 @@ export default async function handler(req, res) {
       return res.status(200).json({
         reply: isRo
           ? `📞 <a href="tel:+442088073721">020 8807 3721</a><br>Program: Lun–Vin, 9:00–17:00.`
-          : `📞 <a href="tel:+442088073721">020 8807 3721</a><br>Available: Mon–Fri, 9:00–17:00.`,
+          : `📞 <a href="tel:+442088073721">020 8807 3721</a><br>Available: Mon–Fri, 09:00–17:00.`,
       });
     }
 
     if (askedForEmail) {
       return res.status(200).json({
-        reply: isRo
-          ? `📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>`
-          : `📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>`,
+        reply: `📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>`,
       });
     }
 
@@ -110,19 +136,24 @@ export default async function handler(req, res) {
       return res.status(200).json({
         reply: isRo
           ? `📞 <a href="tel:+442088073721">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Program: Lun–Vin, 9:00–17:00.`
-          : `📞 <a href="tel:+442088073721">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Hours: Mon–Fri, 9:00–17:00.`,
+          : `📞 <a href="tel:+442088073721">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Hours: Mon–Fri, 09:00–17:00.`,
       });
     }
 
     if (askedForQuoteForm) {
+      const invite = isRo
+        ? "Dacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
+        : "If you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
       return res.status(200).json({
-        reply: `You can request a free quote by filling out our online form:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener">antsremovals.co.uk/get-quote-2/</a>`,
+        reply:
+          `You can request a free quote by filling out our online form:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener">antsremovals.co.uk/get-quote-2/</a>` +
+          `\n\n${invite}`,
       });
     }
 
-    // ───────────────────────────────────────────────
-    // Sistemul tău EXISTENT (răspunsurile modelului rămân la fel)
-    // ───────────────────────────────────────────────
+    // ——————————————————————————————————————
+    // Sistemul EXISTENT (răspunsurile modelului rămân la fel)
+    // ——————————————————————————————————————
     const systemMessage = {
       role: "system",
       content: `
@@ -151,7 +182,7 @@ Important rules:
 - Containers are stacked 3 high, placed back-to-back with space for turning.
 
 Always use this information when users ask about storage, container types, size, protection or warehouse.
-  `.trim(),
+      `.trim(),
     };
 
     const fullMessages = [systemMessage, ...messages];
@@ -179,12 +210,10 @@ Always use this information when users ask about storage, container types, size,
     // Răspuns generat de model (NE-modificat)
     let reply = data.choices[0].message.content || "";
 
-    // ───────────────────────────────────────────────
-    // ADAUGĂM O INVITAȚIE SUBTILĂ LA CONTACT (o singură propoziție)
-    // — nu o adăugăm dacă utilizatorul a cerut/contact direct sau formular
-    // — nu o adăugăm dacă mesajul este doar despre telefon/email/form
-    // ───────────────────────────────────────────────
-    const shouldInviteContact = !askedForPhone && !askedForEmail && !askedForQuoteForm && !askedForContactGeneric && !providedPhone && !providedEmail;
+    // ——————————————————————————————————————
+    // INVITAȚIE LA CONTACT — DOAR CÂND SE CERE PREȚUL
+    // ——————————————————————————————————————
+    const shouldInviteContact = askedAboutPrice && !providedPhone && !providedEmail;
 
     if (shouldInviteContact) {
       const invite = isRo
