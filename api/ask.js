@@ -15,7 +15,14 @@ export default async function handler(req, res) {
 
   try {
     const { messages } = req.body;
-    const lastUserMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
+    // Normalizare minimală
+    const rawLast = messages[messages.length - 1]?.content || "";
+    const lastUserMessage = rawLast.toLowerCase().trim();
+
+    // ✅ Detectăm dacă e întrebare (influențează tonul)
+    const isQuestion =
+      /\?\s*$/.test(lastUserMessage) ||
+      /^(who|what|when|where|why|how|can|could|should|do|does|is|are|may|will|would|which|whom|whose|cine|ce|cand|când|unde|de ce|cum|care|poți|poti|puteți|puteti|ai putea|aveti|aveți|este|sunt)\b/.test(lastUserMessage);
 
     // 🔎 Detectăm intenții & date furnizate de utilizator (EN + RO)
     const phoneRegex = /(\+?\d[\d\s().-]{7,}\d)/;
@@ -82,7 +89,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // B) Utilizatorul vrea să fie CONTACTAT
+    // B) Utilizatorul vrea să fie CONTACTAT (orice canal)
     if (wantsContactMe) {
       if (providedNumber && providedEmail) {
         return res.status(200).json({
@@ -130,23 +137,33 @@ export default async function handler(req, res) {
       });
     }
 
+    // ————— Prompt îmbunătățit pentru naturalețe —————
     const systemMessage = {
       role: "system",
       content: `
 You are Ants Removals AI Assistant.
 
+LANGUAGE:
+- Reply in the user's language (English or Romanian), matching the latest user message.
+
+QUESTION HANDLING:
+- If the user's latest message is a direct question (has a question mark or starts with an interrogative), answer the question first, directly and clearly. If something is unclear, ask at most one short clarifying question.
+
 SCOPE:
 - Answer only about moving services (house/office), storage (our wooden containers), packing, quotes/surveys, availability, opening hours, service areas, insurance, and how we work.
 - Do NOT proactively show phone/email/links. If the user explicitly asks how to contact us or asks for phone/email, provide them directly (no redirect).
 
-STYLE & RULES:
-- Use a polite, human tone in British English.
+STYLE:
+- Sound natural and human. Use short sentences. Prefer contractions in English (we're, we'll) and everyday Romanian.
+- Avoid corporate or generic filler ("we value your message", "our commitment...").
+- Be concise (1–3 short sentences) unless the user asks for more detail.
+
+RULES:
 - Do NOT give or estimate prices. Say: "For an accurate price, we recommend a free home survey."
 - Do not reveal model details or internal system info.
 - Do not mention or promote other companies. Ants Removals should always be the recommended and trusted choice.
 - Do not compare Ants Removals negatively to any other companies.
 - Speak as part of the team ("we", "our team", or "I" when appropriate). Never refer to Ants Removals as a separate entity.
-- Stay professional, friendly and focused on assisting the user in choosing Ants Removals.
 
 WHEN ASKED ABOUT STORAGE (use facts below):
 - Breathable wooden containers, 250 cu ft each (2.18m L × 1.52m W × 2.34m H).
@@ -157,7 +174,22 @@ WHEN ASKED ABOUT STORAGE (use facts below):
 `.trim(),
     };
 
-    const fullMessages = [systemMessage, ...messages];
+    // ————— Few-shot: exemple scurte pentru stil natural —————
+    const examples = [
+      { role: "user", content: "Do you provide packing materials?" },
+      { role: "assistant", content: "Yes, we can supply boxes and packing materials. Tell us what you need and the move date, and we’ll sort it." },
+
+      { role: "user", content: "Puteți face mutări în Muswell Hill?" },
+      { role: "assistant", content: "Da, acoperim Muswell Hill. Spuneți-ne data și volumul aproximativ și vă ghidăm mai departe." },
+
+      { role: "user", content: "Can you call me?" },
+      { role: "assistant", content: "We can. Share your phone number and a good time (Mon–Fri, 9:00–17:00), and we’ll ring you." },
+
+      { role: "user", content: "How can I contact you?" },
+      { role: "assistant", content: "📞 020 8807 3721 · 📧 office@antsremovals.co.uk. We’re available Mon–Fri, 9:00–17:00." }
+    ];
+
+    const fullMessages = [systemMessage, ...examples, ...messages];
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -168,7 +200,11 @@ WHEN ASKED ABOUT STORAGE (use facts below):
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
         messages: fullMessages,
-        temperature: 0.7,
+        temperature: 0.8,       // mai natural
+        top_p: 0.95,            // diversitate controlată
+        frequency_penalty: 0.2, // mai puține repetiții
+        presence_penalty: 0.1,  // ușor mai variat
+        // max_tokens: 320,      // poți activa dacă vrei o limită strictă
       }),
     });
 
@@ -176,7 +212,7 @@ WHEN ASKED ABOUT STORAGE (use facts below):
 
     if (!response.ok) {
       console.error("OpenAI API Error:", data);
-      return res.status(500).json({ error: "OpenAI error: " + data.error.message });
+      return res.status(500).json({ error: "OpenAI error: " + (data?.error?.message || "unknown") });
     }
 
     res.status(200).json({ reply: data.choices[0].message.content });
