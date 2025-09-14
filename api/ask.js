@@ -19,18 +19,18 @@ export default async function handler(req, res) {
     const rawLast = messages[messages.length - 1]?.content || "";
     const lastUserMessage = rawLast.toLowerCase().trim();
 
-    // ✅ Detectăm dacă e întrebare (influențează tonul)
+    // ✅ E întrebare? (ajută la ton)
     const isQuestion =
       /\?\s*$/.test(lastUserMessage) ||
       /^(who|what|when|where|why|how|can|could|should|do|does|is|are|may|will|would|which|whom|whose|cine|ce|cand|când|unde|de ce|cum|care|poți|poti|puteți|puteti|ai putea|aveti|aveți|este|sunt)\b/.test(lastUserMessage);
 
-    // 🔎 Detectăm intenții & date furnizate de utilizator (EN + RO)
+    // 🔎 Detectăm date furnizate în mesaj (EN + RO)
     const phoneRegex = /(\+?\d[\d\s().-]{7,}\d)/;
     const emailRegex = /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i;
     const providedNumber = lastUserMessage.match(phoneRegex)?.[0];
     const providedEmail  = lastUserMessage.match(emailRegex)?.[0];
 
-    // 1) "Call me" / "Sună-mă"
+    // 1) "Call me" / "Sună-mă" (callback)
     const callMeTriggers = [
       "call me","please call me","can you call me","give me a call","phone me",
       "mă poți suna","ma poti suna","mă puteți suna","ma puteti suna",
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
       "te rog să mă suni","va rog sa ma sunati","vă rog să mă sunați"
     ];
 
-    // 2) "Contact me"
+    // 2) "Contact me" (vrea să fie contactat)
     const contactMeTriggers = [
       "contact me","please contact me","reach me","get in touch with me",
       "vreau să fiu contactat","vreau sa fiu contactat","contactați-mă","contactati-ma",
@@ -66,15 +66,30 @@ export default async function handler(req, res) {
       "formular","cerere de ofertă","cerere de oferta","deviz","cerere de deviz"
     ];
 
-    const wantsCallback   = callMeTriggers.some(t => lastUserMessage.includes(t));
-    const wantsContactMe  = contactMeTriggers.some(t => lastUserMessage.includes(t));
-    const wantsContactYou = contactYouTriggers.some(t => lastUserMessage.includes(t));
-    const wantsPhone      = phoneTriggers.some(t => lastUserMessage.includes(t));
-    const wantsEmail      = emailTriggers.some(t => lastUserMessage.includes(t));
-    const wantsQuote      = quoteTriggers.some(t => lastUserMessage.includes(t));
+    // 5) "Email me" (vreau să fiu contactat prin email)
+    const emailMeTriggers = [
+      "email me","send me an email","drop me an email","send email",
+      "trimite-mi un email","trimitemi un email","trimite-mi email","trimitemi email",
+      "imi poti scrie pe email","îmi poți scrie pe email","scrie-mi pe email","scrieti-mi pe email","scrieți-mi pe email"
+    ];
+
+    // 6) "My email is ..." (utilizatorul își dă adresa)
+    const myEmailTriggers = [
+      "my email is","email me at","you can email me at",
+      "emailul meu este","adresa mea de email este","imi poti scrie la","îmi poți scrie la"
+    ];
+
+    const wantsCallback     = callMeTriggers.some(t => lastUserMessage.includes(t));
+    const wantsContactMe    = contactMeTriggers.some(t => lastUserMessage.includes(t));
+    const wantsContactYou   = contactYouTriggers.some(t => lastUserMessage.includes(t));
+    const wantsPhone        = phoneTriggers.some(t => lastUserMessage.includes(t));
+    const wantsEmail        = emailTriggers.some(t => lastUserMessage.includes(t));
+    const wantsQuote        = quoteTriggers.some(t => lastUserMessage.includes(t));
+    const wantsEmailMe      = emailMeTriggers.some(t => lastUserMessage.includes(t));
+    const mentionsMyEmail   = myEmailTriggers.some(t => lastUserMessage.includes(t));
 
     /* ─────────────────────────────────────────────────────────────
-       PRIORITATE RĂSPUNSURI: callback/contact-me → contact-you → phone/email/quote
+       PRIORITATE RĂSPUNSURI: callback/contact-me → contact-you → email-me / my-email → phone/email/quote
        ───────────────────────────────────────────────────────────── */
 
     // A) Utilizatorul vrea să fie SUNAT
@@ -111,14 +126,33 @@ export default async function handler(req, res) {
       });
     }
 
-    // C) Utilizatorul cere datele voastre de contact
+    // C) Utilizatorul cere datele voastre de contact (firma)
     if (wantsContactYou) {
       return res.status(200).json({
         reply: `📞 <a href="tel:+442088073721">020 8807 3721</a><br>📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>We’re available Monday–Friday, 9:00–17:00.`
       });
     }
 
-    // D) Telefon / Email / Quote
+    // C2) "Email me" / "Trimite-mi email"
+    if (wantsEmailMe) {
+      if (providedEmail) {
+        return res.status(200).json({
+          reply: `Great—we'll email you at ${providedEmail}. If there's a preferred subject or any details you'd like us to include, let us know.`
+        });
+      }
+      return res.status(200).json({
+        reply: "Sure—what's the best email address to reach you? (You can also add any details you'd like us to include.)"
+      });
+    }
+
+    // C3) "My email is ..." / "Emailul meu este ..."
+    if (mentionsMyEmail || providedEmail) {
+      return res.status(200).json({
+        reply: `Thanks—we'll reach you at ${providedEmail || "your email"}. If you prefer a call too, share your phone number and a good time (Mon–Fri, 9:00–17:00).`
+      });
+    }
+
+    // D) Telefon / Email / Quote (datele firmei)
     if (wantsPhone) {
       return res.status(200).json({
         reply: `📞 <a href="tel:+442088073721">020 8807 3721</a><br>We’re available Monday–Friday, 9:00–17:00.`
@@ -127,7 +161,7 @@ export default async function handler(req, res) {
 
     if (wantsEmail) {
       return res.status(200).json({
-        reply: `📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>`
+        reply: `📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>If you'd like us to email you, share your address and we'll reach out.`
       });
     }
 
@@ -204,7 +238,7 @@ WHEN ASKED ABOUT STORAGE (use facts below):
         top_p: 0.95,            // diversitate controlată
         frequency_penalty: 0.2, // mai puține repetiții
         presence_penalty: 0.1,  // ușor mai variat
-        // max_tokens: 320,      // poți activa dacă vrei o limită strictă
+        // max_tokens: 320,      // opțional: limită mai strictă
       }),
     });
 
