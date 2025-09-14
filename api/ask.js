@@ -15,124 +15,120 @@ export default async function handler(req, res) {
 
   try {
     const { messages } = req.body;
-const lastUserMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
+    const lastUserMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
 
-// 🔎 Detectăm intenții & date furnizate de utilizator (EN + RO)
+    // 🔎 Detectăm intenții & date furnizate de utilizator (EN + RO)
+    const phoneRegex = /(\+?\d[\d\s().-]{7,}\d)/;
+    const emailRegex = /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i;
+    const providedNumber = lastUserMessage.match(phoneRegex)?.[0];
+    const providedEmail  = lastUserMessage.match(emailRegex)?.[0];
 
-/** Detectăm email/telefon scrise direct în mesaj */
-const phoneRegex = /(\+?\d[\d\s().-]{7,}\d)/;
-const emailRegex = /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i;
-const providedNumber = lastUserMessage.match(phoneRegex)?.[0];
-const providedEmail  = lastUserMessage.match(emailRegex)?.[0];
+    // 1) "Call me" / "Sună-mă"
+    const callMeTriggers = [
+      "call me","please call me","can you call me","give me a call","phone me",
+      "mă poți suna","ma poti suna","mă puteți suna","ma puteti suna",
+      "suna-ma","sună-mă","sunati-ma","sunați-mă",
+      "te rog să mă suni","va rog sa ma sunati","vă rog să mă sunați"
+    ];
 
-/** 1) "Call me" / "Sună-mă" (cerere de apel înapoi) */
-const callMeTriggers = [
-  "call me","please call me","can you call me","give me a call","phone me",
-  "mă poți suna","ma poti suna","mă puteți suna","ma puteti suna",
-  "suna-ma","sună-mă","sunati-ma","sunați-mă",
-  "te rog să mă suni","va rog sa ma sunati","vă rog să mă sunați"
-];
+    // 2) "Contact me"
+    const contactMeTriggers = [
+      "contact me","please contact me","reach me","get in touch with me",
+      "vreau să fiu contactat","vreau sa fiu contactat","contactați-mă","contactati-ma",
+      "ma puteti contacta","mă puteți contacta","contactati va rog","contactați vă rog"
+    ];
 
-/** 2) "Contact me" (vrea să fie contactat pe orice canal) */
-const contactMeTriggers = [
-  "contact me","please contact me","reach me","get in touch with me",
-  "vreau să fiu contactat","vreau sa fiu contactat","contactați-mă","contactati-ma",
-  "ma puteti contacta","mă puteți contacta","contactati va rog","contactați vă rog"
-];
+    // 3) "How can I contact you" (datele firmei)
+    const contactYouTriggers = [
+      "contact you","how can i contact you","contact details","how to contact",
+      "cum va pot contacta","cum ne putem contacta","cum te pot contacta",
+      "date de contact","modalitati de contact","cum va contactez","cum va pot suna"
+    ];
 
-/** 3) "How can I contact you" (cerere de datele voastre) */
-const contactYouTriggers = [
-  "contact you","how can i contact you","contact details","how to contact",
-  "cum va pot contacta","cum ne putem contacta","cum te pot contacta",
-  "date de contact","modalitati de contact","cum va contactez","cum va pot suna"
-];
+    // 4) Cereri explicite pentru telefon/email/quote
+    const phoneTriggers = [
+      "phone number","contact number","can i call","what is your phone","call you",
+      "număr de telefon","numarul de telefon","care este numărul vostru de telefon","telefonul"
+    ];
+    const emailTriggers = [
+      "email","email address","do you have an email","what is your email",
+      "adresa de email","adresa email","care este emailul","mail"
+    ];
+    const quoteTriggers = [
+      "quote","get a quote","quote form","contact form","request form",
+      "formular","cerere de ofertă","cerere de oferta","deviz","cerere de deviz"
+    ];
 
-/** 4) Cereri explicite pentru telefon/email/quote */
-const phoneTriggers = [
-  "phone number","contact number","can i call","what is your phone","call you",
-  "număr de telefon","numarul de telefon","care este numărul vostru de telefon","telefonul"
-];
-const emailTriggers = [
-  "email","email address","do you have an email","what is your email",
-  "adresa de email","adresa email","care este emailul","mail"
-];
-const quoteTriggers = [
-  "quote","get a quote","quote form","contact form","request form",
-  "formular","cerere de ofertă","cerere de oferta","deviz","cerere de deviz"
-];
+    const wantsCallback   = callMeTriggers.some(t => lastUserMessage.includes(t));
+    const wantsContactMe  = contactMeTriggers.some(t => lastUserMessage.includes(t));
+    const wantsContactYou = contactYouTriggers.some(t => lastUserMessage.includes(t));
+    const wantsPhone      = phoneTriggers.some(t => lastUserMessage.includes(t));
+    const wantsEmail      = emailTriggers.some(t => lastUserMessage.includes(t));
+    const wantsQuote      = quoteTriggers.some(t => lastUserMessage.includes(t));
 
-const wantsCallback   = callMeTriggers.some(t => lastUserMessage.includes(t));
-const wantsContactMe  = contactMeTriggers.some(t => lastUserMessage.includes(t));
-const wantsContactYou = contactYouTriggers.some(t => lastUserMessage.includes(t));
-const wantsPhone      = phoneTriggers.some(t => lastUserMessage.includes(t));
-const wantsEmail      = emailTriggers.some(t => lastUserMessage.includes(t));
-const wantsQuote      = quoteTriggers.some(t => lastUserMessage.includes(t));
+    /* ─────────────────────────────────────────────────────────────
+       PRIORITATE RĂSPUNSURI: callback/contact-me → contact-you → phone/email/quote
+       ───────────────────────────────────────────────────────────── */
 
-/* ─────────────────────────────────────────────────────────────
-   PRIORITATE RĂSPUNSURI: callback/contact-me → contact-you → phone/email/quote
-   ───────────────────────────────────────────────────────────── */
+    // A) Utilizatorul vrea să fie SUNAT
+    if (wantsCallback) {
+      if (providedNumber) {
+        return res.status(200).json({
+          reply: `Thanks! We'll ask our team to call you on ${providedNumber}. If you'd like, share your preferred time (Mon–Fri, 9:00–17:00).`
+        });
+      }
+      return res.status(200).json({
+        reply: "Sure—we can call you. Please send your phone number and your preferred time (Mon–Fri, 9:00–17:00)."
+      });
+    }
 
-/** A) Utilizatorul vrea să fie SUNAT (callback) */
-if (wantsCallback) {
-  if (providedNumber) {
-    return res.status(200).json({
-      reply: `Thanks! We'll ask our team to call you on ${providedNumber}. If you'd like, share your preferred time (Mon–Fri, 9:00–17:00).`
-    });
-  }
-  return res.status(200).json({
-    reply: "Sure—we can call you. Please send your phone number and your preferred time (Mon–Fri, 9:00–17:00)."
-  });
-}
+    // B) Utilizatorul vrea să fie CONTACTAT
+    if (wantsContactMe) {
+      if (providedNumber && providedEmail) {
+        return res.status(200).json({
+          reply: `Great—thanks! We can reach you by phone (${providedNumber}) or email (${providedEmail}). What time works best for you (Mon–Fri, 9:00–17:00)?`
+        });
+      }
+      if (providedNumber && !providedEmail) {
+        return res.status(200).json({
+          reply: `Thanks! We can call you on ${providedNumber}. If you prefer email as well, please share your email address. Also, what's a good time (Mon–Fri, 9:00–17:00)?`
+        });
+      }
+      if (!providedNumber && providedEmail) {
+        return res.status(200).json({
+          reply: `Thanks! We can email you at ${providedEmail}. If you'd like a call too, please share your phone number. Also, what's a good time (Mon–Fri, 9:00–17:00)?`
+        });
+      }
+      return res.status(200).json({
+        reply: "Of course—we can contact you. Could you please provide your phone number and/or email address, plus the best time to reach you (Mon–Fri, 9:00–17:00)?"
+      });
+    }
 
-/** B) Utilizatorul vrea să fie CONTACTAT (orice canal) */
-if (wantsContactMe) {
-  // avem deja date?
-  if (providedNumber && providedEmail) {
-    return res.status(200).json({
-      reply: `Great—thanks! We can reach you by phone (${providedNumber}) or email (${providedEmail}). What time works best for you (Mon–Fri, 9:00–17:00)?`
-    });
-  }
-  if (providedNumber && !providedEmail) {
-    return res.status(200).json({
-      reply: `Thanks! We can call you on ${providedNumber}. If you prefer email as well, please share your email address. Also, what's a good time (Mon–Fri, 9:00–17:00)?`
-    });
-  }
-  if (!providedNumber && providedEmail) {
-    return res.status(200).json({
-      reply: `Thanks! We can email you at ${providedEmail}. If you'd like a call too, please share your phone number. Also, what's a good time (Mon–Fri, 9:00–17:00)?`
-    });
-  }
-  // nu avem încă date → cerem ambele
-  return res.status(200).json({
-    reply: "Of course—we can contact you. Could you please provide your phone number and/or email address, plus the best time to reach you (Mon–Fri, 9:00–17:00)?"
-  });
-}
+    // C) Utilizatorul cere datele voastre de contact
+    if (wantsContactYou) {
+      return res.status(200).json({
+        reply: `📞 <a href="tel:+442088073721">020 8807 3721</a><br>📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>We’re available Monday–Friday, 9:00–17:00.`
+      });
+    }
 
-/** C) Utilizatorul cere CUM vă poate contacta (datele firmei) */
-if (wantsContactYou) {
-  return res.status(200).json({
-    reply: `📞 Phone: 02088073721\n📧 Email: office@antsremovals.co.uk\nWe’re available Monday–Friday, 9:00–17:00.`
-  });
-}
+    // D) Telefon / Email / Quote
+    if (wantsPhone) {
+      return res.status(200).json({
+        reply: `📞 <a href="tel:+442088073721">020 8807 3721</a><br>We’re available Monday–Friday, 9:00–17:00.`
+      });
+    }
 
-/** D) Cereri explicite pentru telefon/email/quote (datele firmei) */
-if (wantsPhone) {
-  return res.status(200).json({
-    reply: `📞 Phone: 02088073721\nWe’re available Monday–Friday, 9:00–17:00.`
-  });
-}
+    if (wantsEmail) {
+      return res.status(200).json({
+        reply: `📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>`
+      });
+    }
 
-if (wantsEmail) {
-  return res.status(200).json({
-    reply: `📧 Email: office@antsremovals.co.uk`
-  });
-}
-
-if (wantsQuote) {
-  return res.status(200).json({
-    reply: `You can request a free quote by filling out our online form:\n👉 https://antsremovals.co.uk/get-quote-2/`
-  });
-}
+    if (wantsQuote) {
+      return res.status(200).json({
+        reply: `You can request a free quote by filling out our online form:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener">antsremovals.co.uk/get-quote-2/</a>`
+      });
+    }
 
     const systemMessage = {
       role: "system",
@@ -159,7 +155,7 @@ WHEN ASKED ABOUT STORAGE (use facts below):
 - 25m × 25m warehouse layout allows forklifts to circulate easily between rows.
 - Containers are stacked 3 high, placed back-to-back with turning space.
 `.trim(),
-};
+    };
 
     const fullMessages = [systemMessage, ...messages];
 
