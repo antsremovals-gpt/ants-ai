@@ -44,20 +44,27 @@ export default async function handler(req, res) {
       "ma puteti contacta","mă puteți contacta","contactati va rog","contactați vă rog"
     ];
 
+    // ⬇️ EXTINS: expresii frecvente RO ca să livreze linkuri HTML (tel/mailto)
     const contactYouTriggers = [
       "contact you","how can i contact you","contact details","how to contact",
       "cum va pot contacta","cum ne putem contacta","cum te pot contacta",
-      "date de contact","modalitati de contact","cum va contactez","cum va pot suna"
+      "date de contact","modalitati de contact","cum va contactez","cum va pot suna",
+      "vreau sa va contactez","vreau să vă contactez","as vrea sa va contactez","aș vrea să vă contactez",
+      "pot sa va contactez","pot să vă contactez","cum va pot scrie","vreau sa iau legatura","vreau să iau legătura",
+      "doresc sa va contactez","doresc să vă contactez","as dori sa va contactez","aș dori să vă contactez",
+      "vreau datele voastre de contact","datele voastre de contact"
     ];
 
+    // ⬇️ EXTINS: „telefon” + sinonime uzuale
     const phoneTriggers = [
       "phone number","contact number","can i call","what is your phone","call you",
-      "număr de telefon","numarul de telefon","care este numărul vostru de telefon","telefonul"
+      "număr de telefon","numarul de telefon","care este numărul vostru de telefon","telefonul",
+      "telefon","nr de telefon","nr. de telefon","numar de telefon","numărul de telefon","numarul vostru","numărul vostru","numarul dvs","numărul dvs"
     ];
 
     const emailTriggers = [
       "email","email address","do you have an email","what is your email",
-      "adresa de email","adresa email","care este emailul","mail"
+      "adresa de email","adresa email","care este emailul","mail","emailul","e-mail","e mail","mailul"
     ];
 
     const quoteTriggers = [
@@ -135,7 +142,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // C) Datele firmei
+    // C) Datele firmei (cu linkuri clickabile)
     if (wantsContactYou) {
       return res.status(200).json({
         reply: `📞 <a href="tel:+442088073721">020 8807 3721</a><br>📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>We’re available Monday–Friday, 9:00–17:00.`
