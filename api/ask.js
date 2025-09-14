@@ -232,7 +232,7 @@ WHEN ASKED ABOUT STORAGE (use facts below):
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-5-mini",
+        model: "gpt-3.5-turbo",
         messages: fullMessages,
         temperature: 0.8,       // mai natural
         top_p: 0.95,            // diversitate controlată
