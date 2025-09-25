@@ -15,35 +15,29 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Contactul pe care vrei să-l afișezi în răspunsuri
-    const OFFICE_PHONE = "020 8807 3721";
-    const OFFICE_EMAIL = "office@antsremovals.co.uk";
-
     const { messages } = req.body;
     const lastUserMessageRaw = messages[messages.length - 1]?.content || "";
     const lastUserMessage = lastUserMessageRaw.toLowerCase();
 
-    // Detectare limba (ROMână simplă)
+    // Limba aproximativă pentru mesajele standard (RO/EN)
     const isRo =
       /[ăâîșț]/i.test(lastUserMessageRaw) ||
-      /(mutare|depozit|ofertă|oferta|pret|preț|telefon|email|bun[ăa]|salut)/i.test(
-        lastUserMessage
-      );
+      /(mutare|depozit|ofert[ăa]|pret|preț|telefon|email|bun[ăa]|salut)/i.test(lastUserMessage);
 
-    // Intenții / cereri
+    // Detectăm separat fiecare cerere (ușor extins)
     const askedForPhone = [
       "phone number",
       "contact number",
       "can i call",
       "what is your phone",
+      "call you",
+      "ring you",
       "număr de telefon",
       "numarul de telefon",
       "care este numărul vostru de telefon",
       "care este numarul vostru de telefon",
       "telefonul",
       "telefon",
-      "call you",
-      "ring you",
     ].some((t) => lastUserMessage.includes(t));
 
     const askedForEmail = [
@@ -58,6 +52,7 @@ export default async function handler(req, res) {
     ].some((t) => lastUserMessage.includes(t));
 
     const askedForQuoteForm = [
+      "quote",
       "get a quote",
       "quote form",
       "contact form",
@@ -82,13 +77,13 @@ export default async function handler(req, res) {
       "vreau să vă contactez",
     ].some((t) => lastUserMessage.includes(t));
 
-    // Detectăm dacă userul a furnizat deja un telefon sau email în ultima linie
+    // Utilizatorul a lăsat deja contact
     const phoneRegex = /(\+?\d[\d\s().-]{7,}\d)/;
     const emailRegex = /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i;
     const providedPhone = lastUserMessageRaw.match(phoneRegex)?.[0];
     const providedEmail = lastUserMessageRaw.match(emailRegex)?.[0];
 
-    // A întrebat despre preț/cost?
+    // 🔎 A întrebat DESPRE PREȚ / COST?
     const askedAboutPrice =
       [
         "price",
@@ -115,23 +110,12 @@ export default async function handler(req, res) {
         "tarife",
       ].some((t) => lastUserMessage.includes(t)) || /\b(£|gbp)\s*\d/i.test(lastUserMessage);
 
-    // Helper pentru a transforma numărul în tel:+44... (folosește prefix UK)
-    const telHref = (() => {
-      // Normalizează numărul: elimină caractere non-digit, păstrează + dacă există
-      const cleaned = OFFICE_PHONE.replace(/\s+/g, "").replace(/[^+\d]/g, "");
-      // Dacă începe cu 0, înlocuiește cu +44
-      if (cleaned.startsWith("0")) return `+44${cleaned.slice(1)}`;
-      if (cleaned.startsWith("+")) return cleaned;
-      return `+44${cleaned}`;
-    })();
-
     // ——————————————————————————————————————
-    // Răspunsuri imediate pentru contact când userul cere explicit
+    // Răspunsuri separate pentru contact (cu linkuri clickabile)
     // ——————————————————————————————————————
     if (providedPhone || providedEmail) {
       const x = providedEmail || providedPhone;
       return res.status(200).json({
-        // Răspunsul conține text curat (nu HTML) pentru confirmare; frontend poate afișa ca text
         reply: isRo
           ? `Mulțumim — revenim la ${x}. Dacă preferi alt canal sau o oră anume, spune-ne.`
           : `Thanks — we’ll get back to ${x}. If you prefer another channel or a specific time, just say.`,
@@ -140,76 +124,59 @@ export default async function handler(req, res) {
 
     if (askedForPhone) {
       return res.status(200).json({
-        // Răspunsul conține link tel: — frontend trebuie să insereze ca HTML (innerHTML)
         reply: isRo
-          ? `📞 <a href="tel:${telHref}">${OFFICE_PHONE}</a><br>Program: Lun–Vin, 09:00–17:00.`
-          : `📞 <a href="tel:${telHref}">${OFFICE_PHONE}</a><br>Available: Mon–Fri, 09:00–17:00.`,
+          ? `📞 <a href="tel:+442088073721">020 8807 3721</a><br>Program: Lun–Vin, 09:00–17:00.`
+          : `📞 <a href="tel:+442088073721">020 8807 3721</a><br>Available: Mon–Fri, 09:00–17:00.`,
       });
     }
 
     if (askedForEmail) {
       return res.status(200).json({
-        reply: `📧 <a href="mailto:${OFFICE_EMAIL}">${OFFICE_EMAIL}</a>`,
+        reply: `📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>`,
       });
     }
 
     if (askedForContactGeneric) {
       return res.status(200).json({
         reply: isRo
-          ? `📞 <a href="tel:${telHref}">${OFFICE_PHONE}</a> · 📧 <a href="mailto:${OFFICE_EMAIL}">${OFFICE_EMAIL}</a><br>Program: Lun–Vin, 09:00–17:00.`
-          : `📞 <a href="tel:${telHref}">${OFFICE_PHONE}</a> · 📧 <a href="mailto:${OFFICE_EMAIL}">${OFFICE_EMAIL}</a><br>Hours: Mon–Fri, 09:00–17:00.`,
+          ? `📞 <a href="tel:+442088073721">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Program: Lun–Vin, 09:00–17:00.`
+          : `📞 <a href="tel:+442088073721">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Hours: Mon–Fri, 09:00–17:00.`,
       });
     }
 
     if (askedForQuoteForm) {
       const invite = isRo
-        ? "Dacă vrei un preț exact, ne poți lăsa un număr de telefon sau un email și te contactăm noi rapid. Sau ne găsești la telefon ori pe email — cum îți e mai comod."
-        : "If you’d like an exact price, you can leave a phone number or email and we’ll get back to you quickly. You can also ring us or email us — whatever suits you best.";
+        ? "Dacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
+        : "If you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
       return res.status(200).json({
         reply:
-          `👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener">Free quote form</a>` +
-          `\n\n${invite}\n\n` +
-          (isRo
-            ? `📞 <a href="tel:${telHref}">${OFFICE_PHONE}</a> · 📧 <a href="mailto:${OFFICE_EMAIL}">${OFFICE_EMAIL}</a>`
-            : `📞 <a href="tel:${telHref}">${OFFICE_PHONE}</a> · 📧 <a href="mailto:${OFFICE_EMAIL}">${OFFICE_EMAIL}</a>`),
+          `You can request a free quote by filling out our online form:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener">antsremovals.co.uk/get-quote-2/</a>` +
+          `\n\n${invite}`,
       });
     }
 
     // ——————————————————————————————————————
-    // System prompt NOU: reguli (fără survey nejustificat)
+    // System prompt: REGULI DE BAZĂ, ton natural, fără survey agresiv
     // ——————————————————————————————————————
     const systemMessage = {
       role: "system",
       content: `
-You are Ants Removals’ assistant. Always speak as "we/us". Use UK English (or Romanian if the user writes in Romanian).
-Be polite, human, concise, and helpful.
+You are Ants Removals’ assistant. Speak as “we/us”. Use UK English or Romanian to match the user.
+Be natural, warm and concise.
 
-Important rules:
-- Never push or default to recommending a home survey.
-- Only suggest a survey IF (and only if) one of these is true:
-  • The user explicitly asks for a visit/survey/assessment, OR
-  • It’s a complex/full home or office move with many unknowns, OR
-  • The user demands a fixed, binding price but key details are missing after you’ve asked concise questions.
-- For small/specific jobs (single items like a sofa, an American fridge; a few boxes; specific loads like 870 loose bricks):
-  • Say we can help, then ask 2–3 short, relevant questions grouped in one message so we can estimate in chat.
-  • Avoid sounding salesy. Do not repeat yourself.
-  • Offer human contact gently once per conversation: “we can call you if you share a number, or you can ring our office on ${OFFICE_PHONE}; email works too: ${OFFICE_EMAIL}.” Only say this AFTER you’ve given a helpful answer.
-- Do NOT refuse to discuss ballpark estimates; guide the user with the minimal details needed.
-- Never insist that a survey is required for single-item or clearly described small jobs.
-
-STORAGE DETAILS (use when relevant):
-- Ants Removals uses breathable wooden storage containers (250 cu ft).
-- Container dimensions: 2.18m (L) × 1.52m (W) × 2.34m (H).
-- Containers are stackable and require forklift access.
-- Better protection against condensation and odours vs. shipping containers.
-- Typical layout: 25m × 25m warehouse, containers stacked 3 high, back-to-back with forklift turning space.
+- Do not push or repeat a home survey. Suggest a survey only if it’s clearly a full house/office move with many unknowns, or if the user explicitly asks.
+- For simple/specific jobs, give a direct helpful reply without insisting on a survey.
+- When the user asks about price, avoid exact figures; ask only what’s necessary once, in a conversational way. No long lists, no canned examples.
+- After giving a useful reply, you may offer one optional contact path (once per conversation), politely:
+  “We can call you if you share a number, or you can ring us on 020 8807 3721; email works too: office@antsremovals.co.uk.”
+- Do not repeat questions already asked.
+- Keep it human and friendly.
       `.trim(),
     };
 
-    // Construim mesajele către model
     const fullMessages = [systemMessage, ...messages];
 
-    // Trimitem cererea la OpenAI
+    // OpenAI request
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -227,36 +194,24 @@ STORAGE DETAILS (use when relevant):
 
     if (!response.ok) {
       console.error("OpenAI API Error:", data);
-      return res
-        .status(500)
-        .json({ error: "OpenAI error: " + (data?.error?.message || "unknown") });
+      return res.status(500).json({ error: "OpenAI error: " + data.error.message });
     }
 
-    // Post-filtru: elimină recomandările obsesive de survey (dacă apar)
-    function cleanAnswer(text) {
-      if (!text) return "";
-      return text
-        .replace(/we (highly )?recommend (a )?free home survey.*?(\.|!)/gi, "")
-        .replace(/schedule (a )?home survey.*?(\.|!)/gi, "")
-        .replace(/request a free quote by filling out our online form.*$/gi, "")
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
-    }
+    // Răspuns generat de model
+    let reply = data.choices[0].message.content || "";
 
-    let reply = data.choices?.[0]?.message?.content || "";
-
-    // Dacă s-a întrebat despre preț și nu avem contact, invităm politicos la contact (o singură dată)
+    // ——————————————————————————————————————
+    // Invitație de contact DOAR când se cere prețul (politicos, cu linkuri clicabile)
+    // ——————————————————————————————————————
     const shouldInviteContact = askedAboutPrice && !providedPhone && !providedEmail;
+
     if (shouldInviteContact) {
       const invite = isRo
-        ? `\n\nDacă preferi o discuție cu o persoană reală, ne poți lăsa un număr și te sunăm noi. Sau ne găsești la telefon <a href="tel:${telHref}">${OFFICE_PHONE}</a> ori pe email <a href="mailto:${OFFICE_EMAIL}">${OFFICE_EMAIL}</a>.`
-        : `\n\nIf you’d rather speak to a real person, share a number and we’ll call you. You can also ring us on <a href="tel:${telHref}">${OFFICE_PHONE}</a> or email <a href="mailto:${OFFICE_EMAIL}">${OFFICE_EMAIL}</a>.`;
+        ? `\n\nDacă preferi o discuție cu o persoană reală, ne poți lăsa un număr și te sunăm noi. Sau ne găsești la telefon <a href="tel:+442088073721">020 8807 3721</a> ori pe email <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>.`
+        : `\n\nIf you’d rather speak to a real person, share a number and we’ll call you. You can also ring us on <a href="tel:+442088073721">020 8807 3721</a> or email <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>.`;
       reply += invite;
     }
 
-    reply = cleanAnswer(reply);
-
-    // Returnăm reply (conține HTML pentru linkuri) — frontend trebuie să redea ca HTML
     res.status(200).json({ reply });
   } catch (error) {
     console.error("Server error:", error);
