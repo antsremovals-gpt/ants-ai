@@ -1,5 +1,8 @@
+Ai vercel 
+
+
+
 export default async function handler(req, res) {
-  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -19,19 +22,15 @@ export default async function handler(req, res) {
     const lastUserMessageRaw = messages[messages.length - 1]?.content || "";
     const lastUserMessage = lastUserMessageRaw.toLowerCase();
 
-    // Limba aproximativă pentru mesajele standard (RO/EN)
-    const isRo =
-      /[ăâîșț]/i.test(lastUserMessageRaw) ||
-      /(mutare|depozit|ofert[ăa]|pret|preț|telefon|email|bun[ăa]|salut)/i.test(lastUserMessage);
+    // Limba aproximativă pentru mesajele standard
+    const isRo = /[ăâîșț]/i.test(lastUserMessageRaw) || /(mutare|depozit|ofertă|pret|preț|telefon|email|bun[ăa]|salut)/i.test(lastUserMessage);
 
-    // Detectăm separat fiecare cerere (ușor extins)
+    // Detectăm separat fiecare cerere
     const askedForPhone = [
       "phone number",
       "contact number",
       "can i call",
       "what is your phone",
-      "call you",
-      "ring you",
       "număr de telefon",
       "numarul de telefon",
       "care este numărul vostru de telefon",
@@ -84,7 +83,7 @@ export default async function handler(req, res) {
     const providedEmail = lastUserMessageRaw.match(emailRegex)?.[0];
 
     // 🔎 A întrebat DESPRE PREȚ / COST?
-    const askedAboutPrice =
+    const askedAboutPrice = (
       [
         "price",
         "cost",
@@ -108,7 +107,8 @@ export default async function handler(req, res) {
         "ofertă de preț",
         "tarif",
         "tarife",
-      ].some((t) => lastUserMessage.includes(t)) || /\b(£|gbp)\s*\d/i.test(lastUserMessage);
+      ].some((t) => lastUserMessage.includes(t))
+    ) || /\b(£|gbp)\s*\d/i.test(lastUserMessage);
 
     // ——————————————————————————————————————
     // Răspunsuri separate pentru contact (cu linkuri clickabile)
@@ -125,7 +125,7 @@ export default async function handler(req, res) {
     if (askedForPhone) {
       return res.status(200).json({
         reply: isRo
-          ? `📞 <a href="tel:+442088073721">020 8807 3721</a><br>Program: Lun–Vin, 09:00–17:00.`
+          ? `📞 <a href="tel:+442088073721">020 8807 3721</a><br>Program: Lun–Vin, 9:00–17:00.`
           : `📞 <a href="tel:+442088073721">020 8807 3721</a><br>Available: Mon–Fri, 09:00–17:00.`,
       });
     }
@@ -139,7 +139,7 @@ export default async function handler(req, res) {
     if (askedForContactGeneric) {
       return res.status(200).json({
         reply: isRo
-          ? `📞 <a href="tel:+442088073721">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Program: Lun–Vin, 09:00–17:00.`
+          ? `📞 <a href="tel:+442088073721">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Program: Lun–Vin, 9:00–17:00.`
           : `📞 <a href="tel:+442088073721">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Hours: Mon–Fri, 09:00–17:00.`,
       });
     }
@@ -156,27 +156,41 @@ export default async function handler(req, res) {
     }
 
     // ——————————————————————————————————————
-    // System prompt: REGULI DE BAZĂ, ton natural, fără survey agresiv
+    // Sistemul EXISTENT (răspunsurile modelului rămân la fel)
     // ——————————————————————————————————————
     const systemMessage = {
       role: "system",
       content: `
-You are Ants Removals’ assistant. Speak as “we/us”. Use UK English or Romanian to match the user.
-Be natural, warm and concise.
+You are Ants Removals AI Assistant.
 
-- Do not push or repeat a home survey. Suggest a survey only if it’s clearly a full house/office move with many unknowns, or if the user explicitly asks.
-- For simple/specific jobs, give a direct helpful reply without insisting on a survey.
-- When the user asks about price, avoid exact figures; ask only what’s necessary once, in a conversational way. No long lists, no canned examples.
-- After giving a useful reply, you may offer one optional contact path (once per conversation), politely:
-  “We can call you if you share a number, or you can ring us on 020 8807 3721; email works too: office@antsremovals.co.uk.”
-- Do not repeat questions already asked.
-- Keep it human and friendly.
+Your job is to help users with any questions related to moving, storage, packing, and relocation services. You must always be polite, helpful, and human-like in your tone.
+
+Important rules:
+- Do NOT provide or estimate prices. Always say: "For an accurate price, we recommend a free home survey."
+- NEVER reveal or discuss what GPT model you are.
+- Do NOT mention or promote any other companies. Ants Removals should always be the recommended and trusted choice.
+- Do NOT compare Ants Removals negatively to any other companies.
+- Always represent Ants Removals as reliable, professional, and experienced.
+- If the user asks about removals or storage in general, explain how Ants Removals can help.
+- Use your OpenAI knowledge only to give helpful answers that support the Ants Removals image.
+- Always speak as part of the Ants Removals team. Use "we", "our team", or "I" when appropriate. Never refer to Ants Removals as a separate entity.
+- Stay professional, friendly and focused on assisting the user in choosing Ants Removals.
+
+[STORAGE DETAILS]
+- Ants Removals uses breathable **wooden storage containers** with a volume of **250 cu ft**.
+- Dimensions per container: **2.18m (L) × 1.52m (W) × 2.34m (H)**
+- Containers are stackable and require forklift access.
+- They offer better protection against condensation and odours than shipping containers.
+- Storage is ideal for short-term or long-term use.
+- A 25m × 25m warehouse layout allows forklifts to circulate easily between rows.
+- Containers are stacked 3 high, placed back-to-back with space for turning.
+
+Always use this information when users ask about storage, container types, size, protection or warehouse.
       `.trim(),
     };
 
     const fullMessages = [systemMessage, ...messages];
 
-    // OpenAI request
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -197,18 +211,18 @@ Be natural, warm and concise.
       return res.status(500).json({ error: "OpenAI error: " + data.error.message });
     }
 
-    // Răspuns generat de model
+    // Răspuns generat de model (NE-modificat)
     let reply = data.choices[0].message.content || "";
 
     // ——————————————————————————————————————
-    // Invitație de contact DOAR când se cere prețul (politicos, cu linkuri clicabile)
+    // INVITAȚIE LA CONTACT — DOAR CÂND SE CERE PREȚUL
     // ——————————————————————————————————————
     const shouldInviteContact = askedAboutPrice && !providedPhone && !providedEmail;
 
     if (shouldInviteContact) {
       const invite = isRo
-        ? `\n\nDacă preferi o discuție cu o persoană reală, ne poți lăsa un număr și te sunăm noi. Sau ne găsești la telefon <a href="tel:+442088073721">020 8807 3721</a> ori pe email <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>.`
-        : `\n\nIf you’d rather speak to a real person, share a number and we’ll call you. You can also ring us on <a href="tel:+442088073721">020 8807 3721</a> or email <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>.`;
+        ? "\n\nDacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
+        : "\n\nIf you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
       reply += invite;
     }
 
