@@ -164,19 +164,17 @@ Important rules:
 
     let reply = data.choices[0].message.content || "";
 
-// Înlocuim placeholder-urile cu datele reale
-reply = reply.replace(/\[phone number\]/gi, '<a href="tel:+442088073721">020 8807 3721</a>');
-reply = reply.replace(/\[email\]/gi, '<a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>');
+    // INVITAȚIE LA CONTACT — doar când se cere preț
+    const shouldInviteContact = askedAboutPrice && !providedPhone && !providedEmail;
 
-// INVITAȚIE LA CONTACT — doar când se cere preț
-const shouldInviteContact = askedAboutPrice && !providedPhone && !providedEmail;
+    if (shouldInviteContact) {
+      const invite = isRo
+        ? "\n\nDacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
+        : "\n\nIf you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
+      reply += invite;
+    }
 
-if (shouldInviteContact) {
-  const invite = isRo
-    ? "\n\nDacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
-    : "\n\nIf you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
-  reply += invite;
-}
+    res.status(200).json({ reply });
   } catch (error) {
     console.error("Server error:", error);
     res.status(500).json({ error: "Something went wrong." });
