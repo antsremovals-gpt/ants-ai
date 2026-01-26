@@ -57,6 +57,8 @@ export default async function handler(req, res) {
       "cerere de oferta",
       "deviz",
       "cerere de deviz",
+      "formular online",
+      "online form",
     ].some((t) => lastUserMessage.includes(t));
 
     const askedForContactGeneric = [
@@ -114,40 +116,42 @@ export default async function handler(req, res) {
       return res.status(200).json({
         reply: isRo
           ? `Mulțumim — revenim la ${x}. Dacă preferi alt canal sau o oră anume, spune-ne.`
-          : `Thanks — we’ll get back to ${x}. If you prefer another channel or a specific time, just say.`,
+          : `Thanks — we'll get back to ${x}. If you prefer another channel or a specific time, just say.`,
       });
     }
 
     if (askedForPhone) {
       return res.status(200).json({
         reply: isRo
-          ? `📞 <a href="tel:+442088073721">020 8807 3721</a><br>Program: Lun–Vin, 9:00–17:00.`
-          : `📞 <a href="tel:+442088073721">020 8807 3721</a><br>Available: Mon–Fri, 09:00–17:00.`,
+          ? `📞 <a href="tel:+442088073721" style="color: #0066cc; text-decoration: none;">020 8807 3721</a><br>Program: Lun–Vin, 9:00–17:00.`
+          : `📞 <a href="tel:+442088073721" style="color: #0066cc; text-decoration: none;">020 8807 3721</a><br>Available: Mon–Fri, 09:00–17:00.`,
       });
     }
 
     if (askedForEmail) {
       return res.status(200).json({
-        reply: `📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>`,
+        reply: `📧 <a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: none;">office@antsremovals.co.uk</a>`,
       });
     }
 
     if (askedForContactGeneric) {
       return res.status(200).json({
         reply: isRo
-          ? `📞 <a href="tel:+442088073721">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Program: Lun–Vin, 9:00–17:00.`
-          : `📞 <a href="tel:+442088073721">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Hours: Mon–Fri, 09:00–17:00.`,
+          ? `📞 <a href="tel:+442088073721" style="color: #0066cc; text-decoration: none;">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: none;">office@antsremovals.co.uk</a><br>Program: Lun–Vin, 9:00–17:00.`
+          : `📞 <a href="tel:+442088073721" style="color: #0066cc; text-decoration: none;">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: none;">office@antsremovals.co.uk</a><br>Hours: Mon–Fri, 09:00–17:00.`,
       });
     }
 
     if (askedForQuoteForm) {
       const invite = isRo
         ? "Dacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
-        : "If you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
+        : "If you'd like an exact price, leave a phone number or email and we'll get back to you quickly.";
       return res.status(200).json({
-        reply:
-          `You can request a free quote by filling out our online form:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener">antsremovals.co.uk/get-quote-2/</a>` +
-          `\n\n${invite}`,
+        reply: isRo
+          ? `Puteți solicita o ofertă gratuită completând formularul nostru online:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener" style="color: #0066cc; text-decoration: none; font-weight: bold;">Formular cerere ofertă</a>` +
+            `<br><br>${invite}`
+          : `You can request a free quote by filling out our online form:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener" style="color: #0066cc; text-decoration: none; font-weight: bold;">Online Quote Form</a>` +
+            `<br><br>${invite}`,
       });
     }
 
@@ -217,8 +221,8 @@ Always use this information when users ask about storage, container types, size,
 
     if (shouldInviteContact) {
       const invite = isRo
-        ? "\n\nDacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
-        : "\n\nIf you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
+        ? `<br><br>Dacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid.`
+        : `<br><br>If you'd like an exact price, leave a phone number or email and we'll get back to you quickly.`;
       reply += invite;
     }
 
