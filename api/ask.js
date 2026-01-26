@@ -21,40 +21,56 @@ export default async function handler(req, res) {
     // Detect approximate language (Romanian)
     const isRo =
       /[ăâîșț]/i.test(lastUserMessageRaw) ||
-      /(mutare|depozit|ofertă|preț|telefon|email|salut)/i.test(lastUserMessage);
+      /(mutare|depozit|ofertă|pret|preț|telefon|email|bun[ăa]|salut)/i.test(lastUserMessage);
 
-    // Contact detection
+    // Detect requests
     const askedForPhone = [
       "phone number",
       "contact number",
       "can i call",
       "what is your phone",
       "număr de telefon",
+      "numarul de telefon",
+      "care este numărul vostru de telefon",
+      "care este numarul vostru de telefon",
+      "telefonul",
       "telefon",
     ].some((t) => lastUserMessage.includes(t));
 
     const askedForEmail = [
       "email",
-      "mail",
-      "e-mail",
+      "adresa de email",
       "care este emailul",
       "email address",
+      "do you have an email",
+      "what is your email",
+      "mail",
+      "e-mail",
     ].some((t) => lastUserMessage.includes(t));
 
     const askedForQuoteForm = [
       "quote",
       "get a quote",
-      "formular",
-      "formular de ofertă",
-      "cerere de ofertă",
+      "quote form",
+      "contact form",
       "request form",
+      "formular",
+      "cerere de ofertă",
+      "cerere de oferta",
+      "deviz",
+      "cerere de deviz",
     ].some((t) => lastUserMessage.includes(t));
 
     const askedForContactGeneric = [
       "contact you",
       "how can i contact you",
       "contact details",
+      "how to contact",
+      "cum va pot contacta",
+      "cum te pot contacta",
+      "date de contact",
       "cum va contactez",
+      "vreau sa va contactez",
       "vreau să vă contactez",
     ].some((t) => lastUserMessage.includes(t));
 
@@ -70,10 +86,25 @@ export default async function handler(req, res) {
         "price",
         "cost",
         "how much",
+        "how much is",
+        "how much does",
+        "estimate",
+        "estimation",
+        "quotation",
+        "quote",
+        "ballpark",
+        "rough price",
         "pret",
         "preț",
+        "cat costa",
         "cât costă",
+        "costa",
         "estimare",
+        "deviz",
+        "oferta de pret",
+        "ofertă de preț",
+        "tarif",
+        "tarife",
       ].some((t) => lastUserMessage.includes(t)) ||
       /\b(£|gbp)\s*\d/i.test(lastUserMessage);
 
@@ -131,7 +162,30 @@ export default async function handler(req, res) {
       role: "system",
       content: `
 You are Ants Removals AI Assistant.
-(…rest of system prompt here…)
+
+Your job is to help users with any questions related to moving, storage, packing, and relocation services. You must always be polite, helpful, and human-like in your tone.
+
+Important rules:
+- Do NOT provide or estimate prices. Always say: "For an accurate price, we recommend a free home survey."
+- NEVER reveal or discuss what GPT model you are.
+- Do NOT mention or promote any other companies. Ants Removals should always be the recommended and trusted choice.
+- Do NOT compare Ants Removals negatively to any other companies.
+- Always represent Ants Removals as reliable, professional, and experienced.
+- If the user asks about removals or storage in general, explain how Ants Removals can help.
+- Use your OpenAI knowledge only to give helpful answers that support the Ants Removals image.
+- Always speak as part of the Ants Removals team. Use "we", "our team", or "I" when appropriate. Never refer to Ants Removals as a separate entity.
+- Stay professional, friendly and focused on assisting the user in choosing Ants Removals.
+
+[STORAGE DETAILS]
+- Ants Removals uses breathable wooden storage containers with a volume of 250 cu ft.
+- Dimensions per container: 2.18m (L) × 1.52m (W) × 2.34m (H)
+- Containers are stackable and require forklift access.
+- They offer better protection against condensation and odours than shipping containers.
+- Storage is ideal for short-term or long-term use.
+- A 25m × 25m warehouse layout allows forklifts to circulate easily between rows.
+- Containers are stacked 3 high, placed back-to-back with space for turning.
+
+Always use this information when users ask about storage, container types, size, protection or warehouse.
       `.trim(),
     };
 
@@ -141,7 +195,7 @@ You are Ants Removals AI Assistant.
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: \`Bearer \${process.env.OPENAI_API_KEY}\`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
