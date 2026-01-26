@@ -18,53 +18,34 @@ export default async function handler(req, res) {
     const lastUserMessageRaw = messages[messages.length - 1]?.content || "";
     const lastUserMessage = lastUserMessageRaw.toLowerCase();
 
-    // Detect language from ALL messages to maintain consistency
-    let isRo = false;
-    const allMessagesText = messages.map(m => m.content).join(' ');
-    
-    // Check if ANY message contains Romanian characters or common Romanian words
-    if (/[ăâîșț]/i.test(allMessagesText) || 
-        /(mulțumesc|ms|vă rog|bună|salut|ofertă|preț|costă|mutare|depozit)/i.test(allMessagesText) ||
-        messages.some(m => /[ăâîșț]/i.test(m.content))) {
-      isRo = true;
-    }
-
-    // Also check last message for quick response
-    const lastMessageIsRo = /[ăâîșț]/i.test(lastUserMessageRaw) || 
-                           /(mulțumesc|ms|vă rog|bună|salut|ofertă|preț|costă)/i.test(lastUserMessage);
-
-    // Use Romanian if detected in any message
-    if (lastMessageIsRo) isRo = true;
-
-    // Phone requests in both languages
+    // Phone requests detection
     const askedForPhone = [
-      "phone number", "contact number", "can i call", "what is your phone", "call you",
-      "număr de telefon", "numarul de telefon", "telefonul", "telefon", "suna", "suneti",
-      "pot sa sun", "sun", "call", "ring", "phone", "dați telefon", "dati telefon"
+      "phone", "call", "number", "contact number", "telephone", 
+      "mobile", "cell", "ring", "call you", "phone number",
+      "what is your phone", "can i call", "give me your number"
     ].some((t) => lastUserMessage.includes(t));
 
-    // Email requests in both languages
+    // Email requests detection
     const askedForEmail = [
-      "email", "email address", "mail", "e-mail", "send email", "write to",
-      "adresa de email", "care este emailul", "trimite mail", "scrie", "scrieti", 
-      "contact mail", "dați mail", "dati mail"
+      "email", "mail", "e-mail", "contact email", "email address",
+      "send email", "write to", "mail address", "contact mail",
+      "what is your email", "give me your email"
     ].some((t) => lastUserMessage.includes(t));
 
-    // Quote requests in both languages
+    // Quote requests detection
     const askedForQuoteForm = [
-      "quote", "get a quote", "quote form", "request form", "price", "cost", "how much",
-      "quotation", "estimate", "estimation", "ballpark", "rough price",
-      "ofertă", "oferta", "pret", "preț", "cerere de ofertă", "cerere de oferta", 
-      "deviz", "cerere de deviz", "formular", "cat costa", "cât costă", "costa",
-      "estimare", "cat este", "cât este", "vreau oferta", "doresc oferta"
+      "quote", "price", "cost", "how much", "quotation",
+      "estimate", "estimation", "rate", "rates", "pricing",
+      "get a quote", "request quote", "quote form", "form",
+      "online form", "web form", "contact form", "request form",
+      "form link", "formular", "formularul"
     ].some((t) => lastUserMessage.includes(t));
 
     // General contact requests
     const askedForContactGeneric = [
-      "contact you", "how can i contact you", "contact details", "how to contact",
-      "get in touch", "reach you", "contact",
-      "cum va pot contacta", "cum te pot contacta", "date de contact",
-      "cum va contactez", "vreau sa va contactez", "contactați", "iau legatura"
+      "contact", "contact you", "how to contact", "get in touch",
+      "reach you", "contact details", "contact info", "contact information",
+      "how can i contact", "ways to contact", "get contact"
     ].some((t) => lastUserMessage.includes(t));
 
     // User already provided contact
@@ -73,120 +54,92 @@ export default async function handler(req, res) {
     const providedPhone = lastUserMessageRaw.match(phoneRegex)?.[0];
     const providedEmail = lastUserMessageRaw.match(emailRegex)?.[0];
 
-    // Price questions in both languages
+    // Price questions
     const askedAboutPrice = [
       "price", "cost", "how much", "how much is", "how much does",
-      "estimate", "estimation", "quotation", "quote", "ballpark",
-      "rough price", "pret", "preț", "cat costa", "cât costă", "costa",
-      "estimare", "deviz", "oferta de pret", "ofertă de preț", "tarif", "tarife",
-      "cât ceri", "cat ceri", "buget", "ce tarif", "ce tarife"
+      "estimate", "estimation", "quotation", "quote", "pricing",
+      "rate", "rates", "tariff", "charge", "charges", "fee", "fees",
+      "budget", "expensive", "cheap", "affordable", "costly",
+      "haw much", "howm uch", "howmach", "siata", "citat", "quotei"
     ].some((t) => lastUserMessage.includes(t));
 
     // ——————————————————————————————————————
-    // HUMAN-FRIENDLY RESPONSES (No HTML)
+    // ENGLISH RESPONSES WITH CLICKABLE LINKS
     // ——————————————————————————————————————
     
     // User provided contact
     if (providedPhone || providedEmail) {
-      const contact = providedEmail || providedPhone;
-      if (isRo) {
-        return res.status(200).json({
-          reply: `Perfect! Am notat contactul tău: ${contact}. Te vom contacta în cel mai scurt timp pentru a discuta detaliile. Dacă ai o oră preferată, spune-ne! 😊`
-        });
-      } else {
-        return res.status(200).json({
-          reply: `Great! We've noted your contact: ${contact}. We'll get in touch shortly to discuss the details. If you have a preferred time, just let us know! 😊`
-        });
-      }
+      const contact = providedEmail 
+        ? `<a href="mailto:${providedEmail}" style="color: #0066cc; text-decoration: underline;">${providedEmail}</a>`
+        : `<a href="tel:${providedPhone}" style="color: #0066cc; text-decoration: underline;">${providedPhone}</a>`;
+      
+      return res.status(200).json({
+        reply: `Great! We've noted your contact: ${contact}. We'll get in touch shortly to discuss the details. If you have a preferred time, just let us know! 😊`
+      });
     }
 
-    // Asked for phone
+    // Asked for phone - CLICKABLE LINK
     if (askedForPhone) {
-      if (isRo) {
-        return res.status(200).json({
-          reply: `📞 Sigur! Ne poți suna la 020 8807 3721.\n\nDisponibilitate:\n• Luni-Vineri: 9:00 - 17:00\n• Sâmbătă: 10:00 - 14:00 (doar cu programare)\n\nTe așteptăm la telefon! Dacă nu răspundem, lasă un mesaj și te sunăm înapoi.`
-        });
-      } else {
-        return res.status(200).json({
-          reply: `📞 Absolutely! You can call us at 020 8807 3721.\n\nOur availability:\n• Monday-Friday: 9:00 - 17:00\n• Saturday: 10:00 - 14:00 (by appointment only)\n\nLooking forward to your call! If we don't answer, leave a message and we'll call you back.`
-        });
-      }
+      const phoneLink = '<a href="tel:+442088073721" style="color: #0066cc; text-decoration: underline; font-weight: bold;">020 8807 3721</a>';
+      return res.status(200).json({
+        reply: `📞 Absolutely! You can call us at ${phoneLink}<br><br>Our availability:<br>• Monday-Friday: 9:00 - 17:00<br>• Saturday: 10:00 - 14:00 (by appointment only)<br><br>Looking forward to your call! If we don't answer, leave a message and we'll call you back.`
+      });
     }
 
-    // Asked for email
+    // Asked for email - CLICKABLE LINK
     if (askedForEmail) {
-      if (isRo) {
-        return res.status(200).json({
-          reply: `📧 Cu plăcere! Ne poți scrie la office@antsremovals.co.uk\n\nDescrie-ne ce ai nevoie și îți trimitem o ofertă personalizată în maxim 2 ore lucrătoare.\n\nSfat: Verifică și folderul de spam, că uneori emailurile ajung acolo din greșeală.`
-        });
-      } else {
-        return res.status(200).json({
-          reply: `📧 Of course! You can email us at office@antsremovals.co.uk\n\nTell us what you need and we'll send you a personalized quote within 2 working hours.\n\nTip: Check your spam folder too, as sometimes emails end up there by mistake.`
-        });
-      }
+      const emailLink = '<a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: underline; font-weight: bold;">office@antsremovals.co.uk</a>';
+      return res.status(200).json({
+        reply: `📧 Of course! You can email us at ${emailLink}<br><br>Tell us what you need and we'll send you a personalized quote within 2 working hours.<br><br>Tip: Check your spam folder too, as sometimes emails end up there by mistake.`
+      });
     }
 
-    // Asked for general contact
+    // Asked for general contact - BOTH LINKS CLICKABLE
     if (askedForContactGeneric) {
-      if (isRo) {
-        return res.status(200).json({
-          reply: `😊 Iată cum ne poți contacta:\n\n📞 Telefon: 020 8807 3721\n📧 Email: office@antsremovals.co.uk\n\nProgram:\n• Luni-Vineri: 9:00-17:00\n• Sâmbătă: 10:00-14:00 (cu programare)\n\nRăspundem rapid la toate mesajele!`
-        });
-      } else {
-        return res.status(200).json({
-          reply: `😊 Here's how you can reach us:\n\n📞 Phone: 020 8807 3721\n📧 Email: office@antsremovals.co.uk\n\nHours:\n• Monday-Friday: 9:00-17:00\n• Saturday: 10:00-14:00 (by appointment)\n\nWe respond quickly to all messages!`
-        });
-      }
+      const phoneLink = '<a href="tel:+442088073721" style="color: #0066cc; text-decoration: underline; font-weight: bold;">020 8807 3721</a>';
+      const emailLink = '<a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: underline; font-weight: bold;">office@antsremovals.co.uk</a>';
+      
+      return res.status(200).json({
+        reply: `😊 Here's how you can reach us:<br><br>📞 Phone: ${phoneLink}<br>📧 Email: ${emailLink}<br><br>Hours:<br>• Monday-Friday: 9:00-17:00<br>• Saturday: 10:00-14:00 (by appointment)<br><br>We respond quickly to all messages!`
+      });
     }
 
-    // Asked for quote
+    // Asked for quote form - WITH CLICKABLE CONTACT LINKS
     if (askedForQuoteForm) {
+      const phoneLink = '<a href="tel:+442088073721" style="color: #0066cc; text-decoration: underline; font-weight: bold;">020 8807 3721</a>';
+      const emailLink = '<a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: underline; font-weight: bold;">office@antsremovals.co.uk</a>';
       const quoteUrl = "https://antsremovals.co.uk/get-quote-2/";
       
-      if (isRo) {
-        return res.status(200).json({
-          reply: `📋 Perfect! Pentru o ofertă precisă, ai mai multe opțiuni:\n\n1️⃣ FORMULAR ONLINE RAPID\n👉 ${quoteUrl}\n(Completează în 2 minute, primești oferta în 1 oră)\n\n2️⃣ SUNĂ-NE DIRECT\n📞 020 8807 3721\n(Vorbim live, ofertă pe loc)\n\n3️⃣ TRIMITE-NE EMAIL\n📧 office@antsremovals.co.uk\n(Detaliază-ne ce ai nevoie)\n\n💡 Sfat: Dacă ești pe telefon, copiază linkul și lipește-l în browser.`
-        });
-      } else {
-        return res.status(200).json({
-          reply: `📋 Perfect! For an accurate quote, you have several options:\n\n1️⃣ QUICK ONLINE FORM\n👉 ${quoteUrl}\n(Fill in 2 minutes, get quote in 1 hour)\n\n2️⃣ CALL US DIRECTLY\n📞 020 8807 3721\n(Talk live, get quote immediately)\n\n3️⃣ SEND US AN EMAIL\n📧 office@antsremovals.co.uk\n(Tell us what you need)\n\n💡 Tip: If you're on mobile, copy the link and paste it in your browser.`
-        });
-      }
+      return res.status(200).json({
+        reply: `📋 Perfect! For an accurate quote, you have several options:<br><br>1️⃣ QUICK ONLINE FORM<br>👉 <a href="${quoteUrl}" style="color: #0066cc; text-decoration: underline; font-weight: bold;">${quoteUrl}</a><br>(Fill in 2 minutes, get quote in 1 hour)<br><br>2️⃣ CALL US DIRECTLY<br>📞 ${phoneLink}<br>(Talk live, get quote immediately)<br><br>3️⃣ SEND US AN EMAIL<br>📧 ${emailLink}<br>(Tell us what you need)<br><br>💡 Tip: Click the links above to call or email us directly!`
+      });
     }
 
     // ——————————————————————————————————————
-    // OpenAI SYSTEM FOR OTHER QUESTIONS
+    // OpenAI SYSTEM - ENGLISH ONLY
     // ——————————————————————————————————————
     const systemMessage = {
       role: "system",
-      content: `
-You are Ants Removals AI Assistant. Respond in the SAME LANGUAGE as the user's last message.
+      content: `You are Ants Removals AI Assistant. Respond ONLY in ENGLISH at all times, even if the user writes in another language.
 
-${isRo ? `
-[ROMÂNĂ] Răspunde în ROMÂNĂ dacă utilizatorul a vorbit în română.
-Suntem Ants Removals, firma ta de încredere pentru mutări și depozitare.
-- Nu oferi prețuri exacte, spune "Pentru un preț precis, recomandăm o evaluare gratuită la domiciliu"
-- Folosește "noi", "echipa noastră" - ești parte din Ants Removals
-- Recomandă întotdeauna serviciile Ants Removals
-- Fii prietenos, profesional, de încredere
-- Pentru depozitare: folosim containere din lemn (250 cu ft, 2.18m × 1.52m × 2.34m)
-` : `
-[ENGLISH] Respond in ENGLISH if the user spoke in English.
-We are Ants Removals, your trusted moving and storage company.
-- Do not provide exact prices, say "For an accurate price, we recommend a free home survey"
-- Use "we", "our team" - you are part of Ants Removals
-- Always recommend Ants Removals services
-- Be friendly, professional, trustworthy
-- For storage: we use wooden containers (250 cu ft, 2.18m × 1.52m × 2.34m)
-`}
+Important rules:
+1. ALWAYS respond in ENGLISH only
+2. Do not provide exact prices, say "For an accurate price, we recommend a free home survey"
+3. Use "we", "our team" - you are part of Ants Removals
+4. Always recommend Ants Removals services
+5. Be friendly, professional, trustworthy
+6. Do NOT reveal you are an AI or GPT model
+7. Do NOT mention or promote other companies
+8. Always represent Ants Removals as reliable, professional, and experienced
 
-Important rules for both languages:
-- Do NOT reveal you are an AI or GPT model
-- Do NOT mention or promote other companies
-- Always represent Ants Removals as reliable, professional, and experienced
-- If asked about removals or storage in general, explain how Ants Removals can help
-- Stay focused on assisting the user in choosing Ants Removals
-      `.trim(),
+[STORAGE DETAILS]
+- Ants Removals uses breathable wooden storage containers with a volume of 250 cu ft
+- Dimensions per container: 2.18m (L) × 1.52m (W) × 2.34m (H)
+- Containers are stackable and require forklift access
+- They offer better protection against condensation and odours than shipping containers
+- Storage is ideal for short-term or long-term use
+
+Always use this information when users ask about storage, container types, size, or protection.`
     };
 
     const fullMessages = [systemMessage, ...messages];
@@ -213,15 +166,13 @@ Important rules for both languages:
 
     let reply = data.choices[0].message.content || "";
 
-    // Add contact invitation for price questions
+    // Add contact invitation for price questions WITH CLICKABLE LINKS
     const shouldInviteContact = askedAboutPrice && !providedPhone && !providedEmail;
     
     if (shouldInviteContact) {
-      if (isRo) {
-        reply += "\n\n💡 Pentru un preț exact pentru situația ta specifică, te rugăm să ne contactezi la 020 8807 3721 sau office@antsremovals.co.uk";
-      } else {
-        reply += "\n\n💡 For an exact price for your specific situation, please contact us at 020 8807 3721 or office@antsremovals.co.uk";
-      }
+      const phoneLink = '<a href="tel:+442088073721" style="color: #0066cc; text-decoration: underline;">020 8807 3721</a>';
+      const emailLink = '<a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: underline;">office@antsremovals.co.uk</a>';
+      reply += `<br><br>💡 For an exact price for your specific situation, please contact us at ${phoneLink} or ${emailLink}`;
     }
 
     res.status(200).json({ reply });
