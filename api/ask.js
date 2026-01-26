@@ -18,128 +18,71 @@ export default async function handler(req, res) {
     const lastUserMessageRaw = messages[messages.length - 1]?.content || "";
     const lastUserMessage = lastUserMessageRaw.toLowerCase();
 
-    // Phone requests detection
-    const askedForPhone = [
-      "phone", "call", "number", "contact number", "telephone", 
-      "mobile", "cell", "ring", "call you", "phone number",
-      "what is your phone", "can i call", "give me your number"
-    ].some((t) => lastUserMessage.includes(t));
-
-    // Email requests detection
-    const askedForEmail = [
-      "email", "mail", "e-mail", "contact email", "email address",
-      "send email", "write to", "mail address", "contact mail",
-      "what is your email", "give me your email"
-    ].some((t) => lastUserMessage.includes(t));
-
-    // Quote requests detection
-    const askedForQuoteForm = [
-      "quote", "price", "cost", "how much", "quotation",
-      "estimate", "estimation", "rate", "rates", "pricing",
-      "get a quote", "request quote", "quote form", "form",
-      "online form", "web form", "contact form", "request form",
-      "form link", "formular", "formularul"
-    ].some((t) => lastUserMessage.includes(t));
-
-    // General contact requests
-    const askedForContactGeneric = [
-      "contact", "contact you", "how to contact", "get in touch",
-      "reach you", "contact details", "contact info", "contact information",
-      "how can i contact", "ways to contact", "get contact"
-    ].some((t) => lastUserMessage.includes(t));
-
-    // User already provided contact
+    // Verificare dacă utilizatorul a dat deja telefon/email
     const phoneRegex = /(\+?\d[\d\s().-]{7,}\d)/;
     const emailRegex = /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i;
     const providedPhone = lastUserMessageRaw.match(phoneRegex)?.[0];
     const providedEmail = lastUserMessageRaw.match(emailRegex)?.[0];
 
-    // Price questions
-    const askedAboutPrice = [
-      "price", "cost", "how much", "how much is", "how much does",
-      "estimate", "estimation", "quotation", "quote", "pricing",
-      "rate", "rates", "tariff", "charge", "charges", "fee", "fees",
-      "budget", "expensive", "cheap", "affordable", "costly",
-      "haw much", "howm uch", "howmach", "siata", "citat", "quotei"
-    ].some((t) => lastUserMessage.includes(t));
+    // Detectare cuvinte cheie (simplificat)
+    const askedForPhone = ["phone", "call", "number", "telefon", "suna", "appeler"].some(t => lastUserMessage.includes(t));
+    const askedForEmail = ["email", "mail", "adresa", "adresse"].some(t => lastUserMessage.includes(t));
+    const askedForQuote = ["quote", "price", "cost", "pret", "preț", "ofertă", "devis", "prix"].some(t => lastUserMessage.includes(t));
 
-    // ——————————————————————————————————————
-    // ENGLISH RESPONSES WITH CLICKABLE LINKS
-    // ——————————————————————————————————————
+    // Linkuri
+    const phoneLink = '<a href="tel:+442088073721" style="color: #0066cc; text-decoration: underline; font-weight: bold;">020 8807 3721</a>';
+    const emailLink = '<a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: underline; font-weight: bold;">office@antsremovals.co.uk</a>';
+    const quoteUrl = "https://antsremovals.co.uk/get-quote-2/";
+
+    // --- RĂSPUNSURI DIRECTE UMANE (fără OpenAI) ---
     
-    // User provided contact
+    // 1. User-ul a dat contact
     if (providedPhone || providedEmail) {
-      const contact = providedEmail 
+      const contact = providedEmail
         ? `<a href="mailto:${providedEmail}" style="color: #0066cc; text-decoration: underline;">${providedEmail}</a>`
         : `<a href="tel:${providedPhone}" style="color: #0066cc; text-decoration: underline;">${providedPhone}</a>`;
       
       return res.status(200).json({
-        reply: `Great! We've noted your contact: ${contact}. We'll get in touch shortly to discuss the details. If you have a preferred time, just let us know! 😊`
+        reply: `Perfect! We have your contact ${contact}. Someone from our team will call you within the next hour to discuss your move. 😊<br><br>If you have any other questions in the meantime, just ask!`
       });
     }
 
-    // Asked for phone - CLICKABLE LINK
+    // 2. Cere telefon - RĂSPUNS UMAN
     if (askedForPhone) {
-      const phoneLink = '<a href="tel:+442088073721" style="color: #0066cc; text-decoration: underline; font-weight: bold;">020 8807 3721</a>';
       return res.status(200).json({
-        reply: `📞 Absolutely! You can call us at ${phoneLink}<br><br>Our availability:<br>• Monday-Friday: 9:00 - 17:00<br>• Saturday: 10:00 - 14:00 (by appointment only)<br><br>Looking forward to your call! If we don't answer, leave a message and we'll call you back.`
+        reply: `Of course! Here's our phone number: ${phoneLink}<br><br>You can call us anytime:<br>• Monday to Friday: 9am - 5pm<br>• Saturday: 10am - 2pm (by appointment)<br><br>We're here to answer any questions you might have about your move! If we don't answer right away, leave a message and we'll call you back as soon as possible.`
       });
     }
 
-    // Asked for email - CLICKABLE LINK
+    // 3. Cere email - RĂSPUNS UMAN
     if (askedForEmail) {
-      const emailLink = '<a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: underline; font-weight: bold;">office@antsremovals.co.uk</a>';
       return res.status(200).json({
-        reply: `📧 Of course! You can email us at ${emailLink}<br><br>Tell us what you need and we'll send you a personalized quote within 2 working hours.<br><br>Tip: Check your spam folder too, as sometimes emails end up there by mistake.`
+        reply: `Sure thing! You can email us at ${emailLink}<br><br>Just drop us a message with what you need, and we'll get back to you within 2 hours during business days.<br><br>Feel free to include any details about your move - the more we know, the better we can help!`
       });
     }
 
-    // Asked for general contact - BOTH LINKS CLICKABLE
-    if (askedForContactGeneric) {
-      const phoneLink = '<a href="tel:+442088073721" style="color: #0066cc; text-decoration: underline; font-weight: bold;">020 8807 3721</a>';
-      const emailLink = '<a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: underline; font-weight: bold;">office@antsremovals.co.uk</a>';
-      
+    // 4. Cere ofertă/preț - RĂSPUNS UMAN
+    if (askedForQuote) {
       return res.status(200).json({
-        reply: `😊 Here's how you can reach us:<br><br>📞 Phone: ${phoneLink}<br>📧 Email: ${emailLink}<br><br>Hours:<br>• Monday-Friday: 9:00-17:00<br>• Saturday: 10:00-14:00 (by appointment)<br><br>We respond quickly to all messages!`
+        reply: `Great! To give you an accurate quote for your move, here are a few easy options:<br><br>1️⃣ <strong>Quick online form</strong> - takes just 2 minutes<br>👉 <a href="${quoteUrl}" style="color: #0066cc; text-decoration: underline; font-weight: bold;">Fill out our form here</a><br><br>2️⃣ <strong>Give us a call</strong> - talk directly with our team<br>📞 ${phoneLink}<br><br>3️⃣ <strong>Send us an email</strong> - tell us what you need<br>📧 ${emailLink}<br><br>Whichever you choose, we'll get back to you quickly with a personalized quote!`
       });
     }
 
-    // Asked for quote form - WITH CLICKABLE CONTACT LINKS
-    if (askedForQuoteForm) {
-      const phoneLink = '<a href="tel:+442088073721" style="color: #0066cc; text-decoration: underline; font-weight: bold;">020 8807 3721</a>';
-      const emailLink = '<a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: underline; font-weight: bold;">office@antsremovals.co.uk</a>';
-      const quoteUrl = "https://antsremovals.co.uk/get-quote-2/";
-      
-      return res.status(200).json({
-        reply: `📋 Perfect! For an accurate quote, you have several options:<br><br>1️⃣ QUICK ONLINE FORM<br>👉 <a href="${quoteUrl}" style="color: #0066cc; text-decoration: underline; font-weight: bold;">${quoteUrl}</a><br>(Fill in 2 minutes, get quote in 1 hour)<br><br>2️⃣ CALL US DIRECTLY<br>📞 ${phoneLink}<br>(Talk live, get quote immediately)<br><br>3️⃣ SEND US AN EMAIL<br>📧 ${emailLink}<br>(Tell us what you need)<br><br>💡 Tip: Click the links above to call or email us directly!`
-      });
-    }
-
-    // ——————————————————————————————————————
-    // OpenAI SYSTEM - ENGLISH ONLY
-    // ——————————————————————————————————————
+    // --- DOAR DACĂ NU E NICIUNUL DIN CELE DE MAI SUS, MERGE LA OPENAI ---
     const systemMessage = {
       role: "system",
-      content: `You are Ants Removals AI Assistant. Respond ONLY in ENGLISH at all times, even if the user writes in another language.
+      content: `
+You are Ants Removals AI Assistant. Be friendly, conversational, and human-like.
 
-Important rules:
-1. ALWAYS respond in ENGLISH only
-2. Do not provide exact prices, say "For an accurate price, we recommend a free home survey"
-3. Use "we", "our team" - you are part of Ants Removals
-4. Always recommend Ants Removals services
-5. Be friendly, professional, trustworthy
-6. Do NOT reveal you are an AI or GPT model
-7. Do NOT mention or promote other companies
-8. Always represent Ants Removals as reliable, professional, and experienced
+Important:
+- Use "we", "our team" - you're part of Ants Removals
+- Be helpful and natural in conversation
+- Never say you're AI or mention other companies
+- For prices: say "We recommend a free survey for an accurate quote"
+- For storage: mention our wooden containers (250 cu ft, 2.18m × 1.52m × 2.34m)
 
-[STORAGE DETAILS]
-- Ants Removals uses breathable wooden storage containers with a volume of 250 cu ft
-- Dimensions per container: 2.18m (L) × 1.52m (W) × 2.34m (H)
-- Containers are stackable and require forklift access
-- They offer better protection against condensation and odours than shipping containers
-- Storage is ideal for short-term or long-term use
-
-Always use this information when users ask about storage, container types, size, or protection.`
+Talk like a real person helping with moving and storage questions!
+      `.trim()
     };
 
     const fullMessages = [systemMessage, ...messages];
@@ -153,7 +96,7 @@ Always use this information when users ask about storage, container types, size,
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
         messages: fullMessages,
-        temperature: 0.7,
+        temperature: 0.8, // Mai creativ
       }),
     });
 
@@ -165,17 +108,11 @@ Always use this information when users ask about storage, container types, size,
     }
 
     let reply = data.choices[0].message.content || "";
-
-    // Add contact invitation for price questions WITH CLICKABLE LINKS
-    const shouldInviteContact = askedAboutPrice && !providedPhone && !providedEmail;
     
-    if (shouldInviteContact) {
-      const phoneLink = '<a href="tel:+442088073721" style="color: #0066cc; text-decoration: underline;">020 8807 3721</a>';
-      const emailLink = '<a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: underline;">office@antsremovals.co.uk</a>';
-      reply += `<br><br>💡 For an exact price for your specific situation, please contact us at ${phoneLink} or ${emailLink}`;
-    }
+    // Fără adăugare de linkuri aici - lasă răspunsul natural de la OpenAI
 
     res.status(200).json({ reply });
+
   } catch (error) {
     console.error("Server error:", error);
     res.status(500).json({ error: "Something went wrong." });
