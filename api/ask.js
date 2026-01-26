@@ -18,24 +18,10 @@ export default async function handler(req, res) {
     const lastUserMessageRaw = messages[messages.length - 1]?.content || "";
     const lastUserMessage = lastUserMessageRaw.toLowerCase();
 
-    // 🔧 DETECTARE LIMBĂ IMBUNATĂȚITĂ - verifică TOATE mesajele
-    let isRo = false;
-    
-    // Verifică TOATE mesajele utilizatorului, nu doar ultimul
-    const allUserMessages = messages
-      .filter(m => m.role === 'user')
-      .map(m => m.content.toLowerCase())
-      .join(' ');
-    
-    // Dacă vrei să răspundă ÎNTOTDEAUNA în engleză, setează isRo = false
-    // Dacă vrei să răspundă în aceeași limbă, folosește detectarea de mai jos:
-    
-    // Opțiunea 1: DOAR ENGLEZĂ (recomandat pentru consistență)
-    isRo = false; // Forțează engleză întotdeauna
-    
-    // Opțiunea 2: Detectare automată (dacă vrei să răspundă în aceeași limbă)
-    // isRo = /[ăâîșț]/i.test(allUserMessages) || 
-    //        /(mulțumesc|bună|salut|ofertă|pret|preț)/i.test(allUserMessages);
+    // Limba aproximativă pentru mesajele standard
+    const isRo =
+      /[ăâîșț]/i.test(lastUserMessageRaw) ||
+      /(mutare|depozit|ofertă|pret|preț|telefon|email|bun[ăa]|salut)/i.test(lastUserMessage);
 
     // Detectăm separat fiecare cerere
     const askedForPhone = [
@@ -95,7 +81,7 @@ export default async function handler(req, res) {
     const providedEmail = lastUserMessageRaw.match(emailRegex)?.[0];
 
     // 🔎 A întrebat DESPRE PREȚ / COST?
-    const askedAboutPrice = (
+    const askedAboutPrice =
       [
         "price",
         "cost",
@@ -119,8 +105,8 @@ export default async function handler(req, res) {
         "ofertă de preț",
         "tarif",
         "tarife",
-      ].some((t) => lastUserMessage.includes(t))
-    ) || /\b(£|gbp)\s*\d/i.test(lastUserMessage);
+      ].some((t) => lastUserMessage.includes(t)) ||
+      /\b(£|gbp)\s*\d/i.test(lastUserMessage);
 
     // ——————————————————————————————————————
     // Răspunsuri separate pentru contact (cu linkuri clickabile)
@@ -130,7 +116,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         reply: isRo
           ? `Mulțumim — revenim la ${x}. Dacă preferi alt canal sau o oră anume, spune-ne.`
-          : `Thanks — we'll get back to ${x}. If you prefer another channel or a specific time, just say.`,
+          : `Thanks — we’ll get back to ${x}. If you prefer another channel or a specific time, just say.`,
       });
     }
 
@@ -159,30 +145,27 @@ export default async function handler(req, res) {
     if (askedForQuoteForm) {
       const invite = isRo
         ? "Dacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
-        : "If you'd like an exact price, leave a phone number or email and we'll get back to you quickly.";
+        : "If you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
+
       return res.status(200).json({
         reply:
-          `You can request a free quote by filling out our online form:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener">antsremovals.co.uk/get-quote-2/</a>` +
-          `\n\n${invite}`,
+          `You can request a free quote by filling out our online form:<br>` +
+          `👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener noreferrer">antsremovals.co.uk/get-quote-2/</a>` +
+          `<br><br>${invite}`,
       });
     }
 
     // ——————————————————————————————————————
     // Sistemul EXISTENT (răspunsurile modelului rămân la fel)
     // ——————————————————————————————————————
-    
-    // 🔧 SYSTEM PROMPT IMBUNĂTĂȚIT - spune-i să răspundă în engleză întotdeauna
     const systemMessage = {
       role: "system",
       content: `
 You are Ants Removals AI Assistant.
 
-IMPORTANT: Respond ONLY in ENGLISH at all times, even if the user writes in another language.
-
 Your job is to help users with any questions related to moving, storage, packing, and relocation services. You must always be polite, helpful, and human-like in your tone.
 
 Important rules:
-- Respond ONLY in ENGLISH
 - Do NOT provide or estimate prices. Always say: "For an accurate price, we recommend a free home survey."
 - NEVER reveal or discuss what GPT model you are.
 - Do NOT mention or promote any other companies. Ants Removals should always be the recommended and trusted choice.
@@ -239,7 +222,7 @@ Always use this information when users ask about storage, container types, size,
     if (shouldInviteContact) {
       const invite = isRo
         ? "\n\nDacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
-        : "\n\nIf you'd like an exact price, leave a phone number or email and we'll get back to you quickly.";
+        : "\n\nIf you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
       reply += invite;
     }
 
