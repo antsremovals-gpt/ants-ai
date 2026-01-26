@@ -71,8 +71,7 @@ export default async function handler(req, res) {
     if (providedPhone || providedEmail) {
       const x = providedEmail || providedPhone;
       return res.status(200).json({
-        reply: isRo
-          ? `Mulțumim — revenim la ${x}. Dacă preferi alt canal sau o oră anume, spune-ne.`
+        reply: 
           : `Thanks — we’ll get back to ${x}. If you prefer another channel or a specific time, just say.`
       });
     }
@@ -101,8 +100,7 @@ export default async function handler(req, res) {
     }
 
     if (askedForQuoteForm) {
-      const invite = isRo
-        ? "Dacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
+      const invite =
         : "If you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
 
       return res.status(200).json({
