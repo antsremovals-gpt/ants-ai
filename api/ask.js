@@ -18,10 +18,12 @@ export default async function handler(req, res) {
     const lastUserMessageRaw = messages[messages.length - 1]?.content || "";
     const lastUserMessage = lastUserMessageRaw.toLowerCase();
 
-    // Limba aproximativă pentru mesajele standard
-    const isRo = /[ăâîșț]/i.test(lastUserMessageRaw) || /(mutare|depozit|ofertă|pret|preț|telefon|email|bun[ăa]|salut)/i.test(lastUserMessage);
+    // Detect approximate language Romanian
+    const isRo =
+      /[ăâîșț]/i.test(lastUserMessageRaw) ||
+      /(mutare|depozit|ofertă|pret|preț|telefon|email|salut)/i.test(lastUserMessage);
 
-    // Detectăm separat fiecare cerere
+    // Detect requests
     const askedForPhone = [
       "phone number",
       "contact number",
@@ -30,18 +32,13 @@ export default async function handler(req, res) {
       "număr de telefon",
       "numarul de telefon",
       "care este numărul vostru de telefon",
-      "care este numarul vostru de telefon",
-      "telefonul",
       "telefon",
     ].some((t) => lastUserMessage.includes(t));
 
     const askedForEmail = [
       "email",
       "adresa de email",
-      "care este emailul",
       "email address",
-      "do you have an email",
-      "what is your email",
       "mail",
       "e-mail",
     ].some((t) => lastUserMessage.includes(t));
@@ -55,10 +52,6 @@ export default async function handler(req, res) {
       "formular",
       "cerere de ofertă",
       "cerere de oferta",
-      "deviz",
-      "cerere de deviz",
-      "formular online",
-      "online form",
     ].some((t) => lastUserMessage.includes(t));
 
     const askedForContactGeneric = [
@@ -67,96 +60,77 @@ export default async function handler(req, res) {
       "contact details",
       "how to contact",
       "cum va pot contacta",
-      "cum te pot contacta",
-      "date de contact",
-      "cum va contactez",
-      "vreau sa va contactez",
       "vreau să vă contactez",
     ].some((t) => lastUserMessage.includes(t));
 
-    // Utilizatorul a lăsat deja contact
+    // User provided contact info
     const phoneRegex = /(\+?\d[\d\s().-]{7,}\d)/;
     const emailRegex = /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i;
     const providedPhone = lastUserMessageRaw.match(phoneRegex)?.[0];
     const providedEmail = lastUserMessageRaw.match(emailRegex)?.[0];
 
-    // 🔎 A întrebat DESPRE PREȚ / COST?
-    const askedAboutPrice = (
+    // Price/cost detection
+    const askedAboutPrice =
       [
         "price",
         "cost",
         "how much",
-        "how much is",
-        "how much does",
-        "estimate",
-        "estimation",
-        "quotation",
-        "quote",
-        "ballpark",
-        "rough price",
         "pret",
         "preț",
-        "cat costa",
         "cât costă",
-        "costa",
         "estimare",
-        "deviz",
-        "oferta de pret",
-        "ofertă de preț",
-        "tarif",
-        "tarife",
-      ].some((t) => lastUserMessage.includes(t))
-    ) || /\b(£|gbp)\s*\d/i.test(lastUserMessage);
+      ].some((t) => lastUserMessage.includes(t)) ||
+      /\b(£|gbp)\s*\d/i.test(lastUserMessage);
 
     // ——————————————————————————————————————
-    // Răspunsuri separate pentru contact (cu linkuri clickabile)
+    // Contact / links
     // ——————————————————————————————————————
     if (providedPhone || providedEmail) {
       const x = providedEmail || providedPhone;
       return res.status(200).json({
         reply: isRo
           ? `Mulțumim — revenim la ${x}. Dacă preferi alt canal sau o oră anume, spune-ne.`
-          : `Thanks — we'll get back to ${x}. If you prefer another channel or a specific time, just say.`,
+          : `Thanks — we’ll get back to ${x}. If you prefer another channel or a specific time, just say.`,
       });
     }
 
     if (askedForPhone) {
       return res.status(200).json({
         reply: isRo
-          ? `📞 <a href="tel:+442088073721" style="color: #0066cc; text-decoration: none;">020 8807 3721</a><br>Program: Lun–Vin, 9:00–17:00.`
-          : `📞 <a href="tel:+442088073721" style="color: #0066cc; text-decoration: none;">020 8807 3721</a><br>Available: Mon–Fri, 09:00–17:00.`,
+          ? `📞 <a href="tel:+442088073721">020 8807 3721</a><br>Program: Lun–Vin, 09:00–17:00.`
+          : `📞 <a href="tel:+442088073721">020 8807 3721</a><br>Hours: Mon–Fri, 09:00–17:00.`,
       });
     }
 
     if (askedForEmail) {
       return res.status(200).json({
-        reply: `📧 <a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: none;">office@antsremovals.co.uk</a>`,
+        reply: `📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>`,
       });
     }
 
     if (askedForContactGeneric) {
       return res.status(200).json({
         reply: isRo
-          ? `📞 <a href="tel:+442088073721" style="color: #0066cc; text-decoration: none;">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: none;">office@antsremovals.co.uk</a><br>Program: Lun–Vin, 9:00–17:00.`
-          : `📞 <a href="tel:+442088073721" style="color: #0066cc; text-decoration: none;">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk" style="color: #0066cc; text-decoration: none;">office@antsremovals.co.uk</a><br>Hours: Mon–Fri, 09:00–17:00.`,
+          ? `📞 <a href="tel:+442088073721">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Program: Lun–Vin, 09:00–17:00.`
+          : `📞 <a href="tel:+442088073721">020 8807 3721</a> · 📧 <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a><br>Hours: Mon–Fri, 09:00–17:00.`,
       });
     }
 
     if (askedForQuoteForm) {
       const invite = isRo
         ? "Dacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
-        : "If you'd like an exact price, leave a phone number or email and we'll get back to you quickly.";
+        : "If you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
+
       return res.status(200).json({
-        reply: isRo
-          ? `Puteți solicita o ofertă gratuită completând formularul nostru online:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: none; font-weight: bold;">Formular cerere ofertă</a>` +
-            `<br><br>${invite}`
-          : `You can request a free quote by filling out our online form:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: none; font-weight: bold;">Online Quote Form</a>` +
-            `<br><br>${invite}`,
+        reply:
+          `You can request a free quote by filling out our online form:<br>` +
+          `👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener noreferrer">https://antsremovals.co.uk/get-quote-2/</a>` +
+          `<br><br>${invite}`,
       });
     }
 
     // ——————————————————————————————————————
-    // Sistemul EXISTENT (răspunsurile modelului rămân la fel)
+    // OpenAI / assistant
     // ——————————————————————————————————————
     const systemMessage = {
       role: "system",
@@ -177,15 +151,15 @@ Important rules:
 - Stay professional, friendly and focused on assisting the user in choosing Ants Removals.
 
 [STORAGE DETAILS]
-- Ants Removals uses breathable **wooden storage containers** with a volume of **250 cu ft**.
-- Dimensions per container: **2.18m (L) × 1.52m (W) × 2.34m (H)**
+- Ants Removals uses breathable wooden storage containers with a volume of 250 cu ft.
+- Dimensions per container: 2.18m (L) × 1.52m (W) × 2.34m (H)
 - Containers are stackable and require forklift access.
 - They offer better protection against condensation and odours than shipping containers.
 - Storage is ideal for short-term or long-term use.
 - A 25m × 25m warehouse layout allows forklifts to circulate easily between rows.
 - Containers are stacked 3 high, placed back-to-back with space for turning.
 
-Always use this information when users ask about storage, container types, size, protection or warehouse.
+Always use these details when users ask about storage, container types, protection or warehouse.
       `.trim(),
     };
 
@@ -211,18 +185,14 @@ Always use this information when users ask about storage, container types, size,
       return res.status(500).json({ error: "OpenAI error: " + data.error.message });
     }
 
-    // Răspuns generat de model (NE-modificat)
     let reply = data.choices[0].message.content || "";
 
-    // ——————————————————————————————————————
-    // INVITAȚIE LA CONTACT — DOAR CÂND SE CERE PREȚUL
-    // ——————————————————————————————————————
+    // Invite to contact if asked about price
     const shouldInviteContact = askedAboutPrice && !providedPhone && !providedEmail;
-
     if (shouldInviteContact) {
       const invite = isRo
-        ? `<br><br>Dacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid.`
-        : `<br><br>If you'd like an exact price, leave a phone number or email and we'll get back to you quickly.`;
+        ? "\n\nDacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
+        : "\n\nIf you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
       reply += invite;
     }
 
