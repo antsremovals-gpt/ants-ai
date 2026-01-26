@@ -68,35 +68,34 @@ export default async function handler(req, res) {
     // ——————————————————————————————————————
     // Răspunsuri separate pentru contact și linkuri
     // ——————————————————————————————————————
-   if (providedPhone || providedEmail) {
+    if (providedPhone || providedEmail) {
       const x = providedEmail || providedPhone;
       return res.status(200).json({
         reply: isRo
-          ? Mulțumim — revenim la ${x}. Dacă preferi alt canal sau o oră anume, spune-ne.
-          : Thanks — we’ll get back to ${x}. If you prefer another channel or a specific time, just say.
+          ? `Mulțumim — revenim la ${x}. Dacă preferi alt canal sau o oră anume, spune-ne.`
+          : `Thanks — we’ll get back to ${x}. If you prefer another channel or a specific time, just say.`
       });
     }
 
     if (askedForPhone) {
-  return res.status(200).json({
-    reply: isRo
-      ? 📞 <a href="tel:+442088073721">020 8807 3721</a> (Lun–Vin, 9:00–17:00)
-      : 📞 <a href="tel:+442088073721">020 8807 3721</a> (Mon–Fri, 09:00–17:00)
-  });
-}
-
+      return res.status(200).json({
+        reply: isRo
+          ? `📞 020 8807 3721 (Mon–Fri, 9:00–17:00)`
+          : `📞 020 8807 3721 (Mon–Fri, 09:00–17:00)`
+      });
+    }
 
     if (askedForEmail) {
       return res.status(200).json({
-        reply: 📧 office@antsremovals.co.uk
+        reply: `📧 office@antsremovals.co.uk`
       });
     }
 
     if (askedForContactGeneric) {
       return res.status(200).json({
         reply: isRo
-          ? 📞 020 8807 3721 · 📧 office@antsremovals.co.uk (Lun–Vin, 9:00–17:00)
-          : 📞 020 8807 3721 · 📧 office@antsremovals.co.uk (Mon–Fri, 09:00–17:00)
+          ? `📞 020 8807 3721 · 📧 office@antsremovals.co.uk (Lun–Vin, 9:00–17:00)`
+          : `📞 020 8807 3721 · 📧 office@antsremovals.co.uk (Mon–Fri, 09:00–17:00)`
       });
     }
 
@@ -104,7 +103,6 @@ export default async function handler(req, res) {
       const invite = isRo
         ? "Dacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
         : "If you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
-
 
       return res.status(200).json({
         reply: `You can request a free quote by filling out our online form:\n👉 https://antsremovals.co.uk/get-quote-2/\n\n${invite}`
@@ -160,13 +158,13 @@ Important rules:
     const data = await response.json();
 
     if (!response.ok) {
-  console.error("OpenAI API Error:", data);
-  return res.status(500).json({ error: "OpenAI error: " + data.error.message });
-}
+      console.error("OpenAI API Error:", data);
+      return res.status(500).json({ error: "OpenAI error: " + data.error.message });
+    }
 
-let reply = data.choices[0].message.content || "";
+    let reply = data.choices[0].message.content || "";
 
-// 🔹 Înlocuim placeholder-urile cu datele reale
+// Înlocuim placeholder-urile cu datele reale
 reply = reply.replace(/\[phone number\]/gi, '<a href="tel:+442088073721">020 8807 3721</a>');
 reply = reply.replace(/\[email\]/gi, '<a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>');
 
@@ -179,9 +177,7 @@ if (shouldInviteContact) {
     : "\n\nIf you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
   reply += invite;
 }
-
-res.status(200).json({ reply });
-} catch (error) {
+  } catch (error) {
     console.error("Server error:", error);
     res.status(500).json({ error: "Something went wrong." });
   }
