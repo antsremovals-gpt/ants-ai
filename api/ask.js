@@ -180,3 +180,8 @@ if (shouldInviteContact) {
 }
 
 res.status(200).json({ reply });
+} catch (error) {
+    console.error("Server error:", error);
+    res.status(500).json({ error: "Something went wrong." });
+  }
+}
