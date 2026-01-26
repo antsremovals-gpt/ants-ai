@@ -78,12 +78,13 @@ export default async function handler(req, res) {
     }
 
     if (askedForPhone) {
-      return res.status(200).json({
-        reply: isRo
-          ? `📞 020 8807 3721 (Mon–Fri, 9:00–17:00)`
-          : `📞 020 8807 3721 (Mon–Fri, 09:00–17:00)`
-      });
-    }
+  return res.status(200).json({
+    reply: isRo
+      ? `📞 <a href="tel:+442088073721">020 8807 3721</a> (Lun–Vin, 9:00–17:00)`
+      : `📞 <a href="tel:+442088073721">020 8807 3721</a> (Mon–Fri, 09:00–17:00)`
+  });
+}
+
 
     if (askedForEmail) {
       return res.status(200).json({
