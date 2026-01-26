@@ -51,8 +51,6 @@ export default async function handler(req, res) {
     const possibleQuoteLinks = [
       "https://antsremovals.co.uk/get-quote-2/",  // Linkul original
       "https://antsremovals.co.uk/contact/",      // Pagina de contact
-      "https://antsremovals.co.uk/get-a-quote/",  // Posibilă alternativă
-      "https://antsremovals.co.uk/quote/",        // Altă variantă
       "https://antsremovals.co.uk/",              // Pagina principală
     ];
     
