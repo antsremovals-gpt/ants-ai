@@ -148,9 +148,9 @@ export default async function handler(req, res) {
         : "If you'd like an exact price, leave a phone number or email and we'll get back to you quickly.";
       return res.status(200).json({
         reply: isRo
-          ? `Puteți solicita o ofertă gratuită completând formularul nostru online:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: none; font-weight: bold;">Formular cerere ofertă</a><br><em>(După ce dai click, va trebui să accepți cookie-urile pentru a vedea formularul)</em>` +
+          ? `Puteți solicita o ofertă gratuită completând formularul nostru online:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: none; font-weight: bold;">Formular cerere ofertă</a>` +
             `<br><br>${invite}`
-          : `You can request a free quote by filling out our online form:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: none; font-weight: bold;">Online Quote Form</a><br><em>(After clicking, you'll need to accept cookies to see the form)</em>` +
+          : `You can request a free quote by filling out our online form:<br>👉 <a href="https://antsremovals.co.uk/get-quote-2/" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: none; font-weight: bold;">Online Quote Form</a>` +
             `<br><br>${invite}`,
       });
     }
