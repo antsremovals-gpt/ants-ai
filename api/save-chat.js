@@ -8,11 +8,12 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
-    // Luăm absolut tot ce trimite site-ul, indiferent de format
-    const body = req.body;
-    
-    // Transformăm tot ce am primit într-un text citibil
-    const debugInfo = JSON.stringify(body, null, 2);
+    const data = req.body;
+
+    // Extragem datele exact cum le trimite site-ul tău
+    const chatContent = data.content || "No content received";
+    const chatSubject = data.subject || `AI Chat Log - ${new Date().toLocaleString('en-GB')}`;
+    const reason = data.reason || "Automatic save";
 
     const transporter = nodemailer.createTransport({
       service: 'Gmail',
@@ -23,17 +24,16 @@ export default async function handler(req, res) {
       }
     });
 
-    // Trimitem email-ul chiar dacă nu sunt "mesaje" clare
-    // Așa vedem exact ce trimite site-ul tău
     await transporter.sendMail({
-      from: 'ants.ai.report@gmail.com',
+      from: 'Ants AI Assistant <ants.ai.report@gmail.com>',
       to: 'ants.ai.report@gmail.com',
-      subject: `AI Chat RAW DATA - ${new Date().toLocaleString('en-GB')}`,
-      text: `Date primite de la site:\n\n${debugInfo}`
+      subject: chatSubject,
+      text: `Reason for saving: ${reason}\n\nCONVERSATION:\n\n${chatContent}`
     });
 
-    return res.status(200).json({ success: true, received: body });
+    return res.status(200).json({ success: true });
   } catch (error) {
+    console.error("Error sending mail:", error.message);
     return res.status(500).json({ error: error.message });
   }
 }
