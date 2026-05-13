@@ -18,6 +18,37 @@ export default async function handler(req, res) {
     const lastUserMessageRaw = messages[messages.length - 1]?.content || "";
     const lastUserMessage = lastUserMessageRaw.toLowerCase();
 
+    // Small job detection (NEW RULE - checked FIRST)
+    const smallJobKeywords = [
+      // Single items
+      "single item", "one item", "just one", "only one",
+      // Furniture / appliances
+      "sofa", "bed", "mattress",
+      "chair", "table", "fridge",
+      "washing machine", "dryer",
+      // Small move expressions
+      "small move", "tiny move", "mini move", "little move",
+      "small job", "tiny job", "mini job", "little job",
+      // Quantity-based
+      "few items", "couple of items", "handful of items",
+      // Other
+      "light move", "small relocation", "man and van"
+    ];
+
+    const isSmallJob = smallJobKeywords.some(t =>
+      lastUserMessage.includes(t)
+    );
+
+    if (isSmallJob) {
+      return res.status(200).json({
+        reply:
+          "I understand — that sounds like a small job.\n\n" +
+          "For this type of move we usually recommend our Man and Van service, which is perfect for small, light or flexible relocations.\n\n" +
+          "It's a simple service and in most cases we can arrange everything quickly without a survey. Our office team can confirm the details and give you an exact price once you contact us or leave your information.\n\n" +
+          "📞 020 8807 3721\n📧 office@antsremovals.co.uk"
+      });
+    }
+
     // Detect language
     const isRo =
       /[ăâîșț]/i.test(lastUserMessageRaw) ||
@@ -93,7 +124,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // System prompt
+    // System prompt with RESPONSE LENGTH RULE added
     const systemMessage = {
       role: "system",
       content: `
@@ -108,6 +139,13 @@ Important rules:
 - Do NOT compare Ants Removals negatively with competitors.
 - Always represent Ants Removals as reliable, professional, and experienced.
 - Always speak as part of the Ants Removals team using "we" and "our team".
+
+RESPONSE LENGTH RULE:
+- Keep all answers short and clear
+- Maximum 3–5 lines per reply
+- Avoid long explanations or repeated ideas
+- Only expand if the user explicitly asks for details
+- Prefer simple, direct sentences
 
 [STORAGE DETAILS]
 - Ants Removals uses breathable wooden storage containers with a volume of 250 cu ft.
