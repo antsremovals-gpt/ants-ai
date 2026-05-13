@@ -3,8 +3,13 @@
   "routes": [
     {
       "src": "/api/ask",
-      "methods": ["POST"],
+      "methods": ["POST", "OPTIONS"],
       "dest": "api/ask.js"
+    },
+    {
+      "src": "/api/save-chat",
+      "methods": ["POST", "OPTIONS"],
+      "dest": "api/save-chat.js"
     }
   ]
 }
