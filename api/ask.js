@@ -93,7 +93,6 @@ LANGUAGE RULES (STRICT):
     // -----------------------------
     // INTENT DETECTION
     // -----------------------------
-    // Removed the £ regex because it causes false positives
     const priceKeywords = [
       "price", "cost", "how much", "estimate", "quote", "quotation", "pricing",
       "tariff", "pret", "preț", "cât costă", "cat costa", "costs",
@@ -113,14 +112,23 @@ LANGUAGE RULES (STRICT):
     ].some(t => lastUserMessage.includes(t));
 
     // -----------------------------
-    // SMALL JOB DETECTION
+    // SMALL JOB DETECTION (ENGLISH ONLY - ROBUST)
     // -----------------------------
     const smallJobKeywords = [
-      "single", "one item", "just one", "sofa", "bed", "mattress",
-      "chair", "table", "fridge", "small move", "few items"
+      // Single items
+      "single item", "one item", "just one", "only one",
+      "a sofa", "sofa", "a bed", "bed", "a mattress", "mattress",
+      "a chair", "chair", "a table", "table", "a fridge", "fridge",
+      "a washing machine", "washing machine", "a dryer", "dryer",
+      // Small move variations
+      "small move", "tiny move", "mini move", "little move",
+      "small job", "tiny job", "mini job", "little job",
+      "few items", "couple of items", "handful of items",
+      "light move", "small relocation", "man and van"
     ];
 
-    const isSmallJob = smallJobKeywords.some(t => lastUserMessage.includes(t)) && !askedAboutPrice;
+    // Explicit small job detection - no price condition override
+    const isSmallJob = smallJobKeywords.some(t => lastUserMessage.includes(t));
 
     // -----------------------------
     // EARLY RESPONSES (NO AI CALL - saves tokens and time)
@@ -155,7 +163,8 @@ LANGUAGE RULES (STRICT):
           "I understand — that sounds like a small job.\n\n" +
           "For this type of move we usually recommend our Man and Van service, which is perfect for small, light or flexible relocations.\n\n" +
           "It's a simple service and in most cases we can arrange everything quickly without a survey. Our office team can confirm the details and give you an exact price once you contact us or leave your information.\n\n" +
-          `📞 ${CONTACT.phone}\n📧 ${CONTACT.email}`
+          `📞 ${CONTACT.phone}\n` +
+          `📧 Or leave your phone number or email here in the chat, and we'll get back to you within a few hours.`
       });
     }
 
@@ -239,7 +248,7 @@ ${CONTACT.website}
     // Safety fallback if OpenAI returns empty response
     if (!reply || reply.length < 5) {
       return res.status(200).json({
-        reply: `For an accurate price, please contact our office:\n📞 ${CONTACT.phone}\n📧 ${CONTACT.email}`
+        reply: `For an accurate price, please contact our office:\n📞 ${CONTACT.phone}\n📧 ${CONTACT.email}\n\nOr leave your phone number or email here in the chat and we'll call you back.`
       });
     }
 
