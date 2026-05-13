@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
   try {
     // -----------------------------
-    // VALIDARE REQUEST BODY
+    // VALIDARE REQUEST
     // -----------------------------
     if (!req.body || typeof req.body !== "object") {
       return res.status(400).json({ error: "Invalid request body" });
@@ -25,7 +25,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Messages must be a non-empty array" });
     }
 
-    // Validate each message has required fields
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
       if (!msg.role || !msg.content || typeof msg.content !== "string") {
@@ -37,7 +36,7 @@ export default async function handler(req, res) {
     const lastUserMessage = lastUserMessageRaw.toLowerCase();
 
     // -----------------------------
-    // BUSINESS CONTACT (single source of truth)
+    // CONTACT (DOAR INTERNE, NU ÎN RĂSPUNSURI REPETATE)
     // -----------------------------
     const CONTACT = {
       phone: "020 8807 3721",
@@ -47,17 +46,16 @@ export default async function handler(req, res) {
     };
 
     // -----------------------------
-    // LANGUAGE DETECTION (DYNAMIC - based on last message)
+    // LANGUAGE DETECTION
     // -----------------------------
     const detectLanguage = (text = "") => {
-      if (!text) return "en";
       const t = text.toLowerCase();
 
       if (/[ăâîșț]/i.test(text)) return "ro";
-      if (/(hola|gracias|cuánto|precio|mudanza|hablas|español)/i.test(t)) return "es";
-      if (/(bonjour|merci|prix|combien|déménagement|français)/i.test(t)) return "fr";
-      if (/(hallo|danke|preis|kosten|umzug|deutsch)/i.test(t)) return "de";
-      if (/(ciao|grazie|quanto|prezzo|mudanza|italiano)/i.test(t)) return "it";
+      if (/(hola|gracias|precio|mudanza)/i.test(t)) return "es";
+      if (/(bonjour|merci|prix|déménagement)/i.test(t)) return "fr";
+      if (/(hallo|danke|umzug|preis)/i.test(t)) return "de";
+      if (/(ciao|grazie|prezzo|trasloco)/i.test(t)) return "it";
 
       return "en";
     };
@@ -65,150 +63,146 @@ export default async function handler(req, res) {
     const activeLanguage = detectLanguage(lastUserMessageRaw);
 
     const LANGUAGE_RULE = `
-LANGUAGE RULES (STRICT):
-- Always respond in the same language as the user's latest message
-- If the user changes language, immediately switch to that language
-- Never stick to previous language
-- Detected language for this response: ${activeLanguage}
-    `.trim();
+- Always respond in the user's language (${activeLanguage})
+- Switch language immediately if user changes it
+`.trim();
 
     // -----------------------------
-    // DETECT CONTACT DETAILS IN USER MESSAGE
+    // CONTACT DETECTION
     // -----------------------------
     const emailRegex = /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i;
-
-    const phoneRegex =
-      /(\+?44[\s\-]?\(?0\d{2,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4}|\+?\d[\d\s().-]{9,}\d)/;
+    const phoneRegex = /(\+?\d[\d\s().-]{8,}\d)/;
 
     const providedEmail = lastUserMessageRaw.match(emailRegex)?.[0];
     const providedPhone = lastUserMessageRaw.match(phoneRegex)?.[0];
 
-    const isValidPhone = (phone) => {
-      if (!phone) return false;
-      return phone.replace(/\D/g, "").length >= 9;
-    };
+    const isValidPhone = (phone) =>
+      phone && phone.replace(/\D/g, "").length >= 9;
 
-    const hasValidPhone = providedPhone && isValidPhone(providedPhone);
+    const hasValidPhone = isValidPhone(providedPhone);
 
     // -----------------------------
     // INTENT DETECTION
     // -----------------------------
     const priceKeywords = [
-      "price", "cost", "how much", "estimate", "quote", "quotation", "pricing",
-      "tariff", "pret", "preț", "cât costă", "cat costa", "costs",
-      "how much does", "what would it cost", "what's the cost", "how much for"
+      "price", "cost", "how much", "quote", "estimate", "pricing"
     ];
 
-    const askedAboutPrice = priceKeywords.some(t => lastUserMessage.includes(t));
+    const askedAboutPrice = priceKeywords.some(t =>
+      lastUserMessage.includes(t)
+    );
 
     const contactKeywords = [
-      "contact", "phone", "email", "call", "contact details", "reach you"
+      "contact", "phone", "email", "call"
     ];
 
-    const askedForContact = contactKeywords.some(t => lastUserMessage.includes(t));
+    const askedForContact = contactKeywords.some(t =>
+      lastUserMessage.includes(t)
+    );
 
-    const askedForQuoteForm = [
-      "quote form", "get a quote", "request form", "formular"
-    ].some(t => lastUserMessage.includes(t));
+    const quoteKeywords = [
+      "quote form", "get a quote", "request form"
+    ];
+
+    const askedForQuoteForm = quoteKeywords.some(t =>
+      lastUserMessage.includes(t)
+    );
 
     // -----------------------------
-    // SMALL JOB DETECTION (ENGLISH ONLY - ROBUST)
+    // LEAD INTENT (IMPORTANT FIX)
     // -----------------------------
+    const leadIntentKeywords = [
+      "move", "moving", "removal", "relocation",
+      "help", "need", "can you help",
+      "mutare", "servicii", "transport", "job"
+    ];
+
+    const isLeadIntent = leadIntentKeywords.some(t =>
+      lastUserMessage.includes(t)
+    );
+
     const smallJobKeywords = [
-      // Single items
-      "single item", "one item", "just one", "only one",
-      "a sofa", "sofa", "a bed", "bed", "a mattress", "mattress",
-      "a chair", "chair", "a table", "table", "a fridge", "fridge",
-      "a washing machine", "washing machine", "a dryer", "dryer",
-      // Small move variations
-      "small move", "tiny move", "mini move", "little move",
-      "small job", "tiny job", "mini job", "little job",
-      "few items", "couple of items", "handful of items",
-      "light move", "small relocation", "man and van"
+      "sofa", "bed", "chair", "fridge", "table",
+      "single", "one item", "few items", "small job"
     ];
 
-    // Explicit small job detection - no price condition override
-    const isSmallJob = smallJobKeywords.some(t => lastUserMessage.includes(t));
+    const isSmallJob = smallJobKeywords.some(t =>
+      lastUserMessage.includes(t)
+    );
+
+    const shouldTriggerLeadFlow = isSmallJob || isLeadIntent;
 
     // -----------------------------
-    // EARLY RESPONSES (NO AI CALL - saves tokens and time)
+    // EARLY RESPONSES
     // -----------------------------
 
-    // Case 1: User provided contact details
     if (providedEmail || hasValidPhone) {
       const value = providedEmail || providedPhone;
+
       return res.status(200).json({
-        reply: `Thanks — we've received your details (${value}). Our office team will contact you shortly.`
+        reply: `Thanks — we've received your details. Our team will contact you shortly.`
       });
     }
 
-    // Case 2: User asked for contact information
     if (askedForContact) {
       return res.status(200).json({
-        reply: `You can contact our office directly:\n📞 ${CONTACT.phone} (Mon–Fri 09:00–17:00)\n📧 ${CONTACT.email}\n${CONTACT.website}`
+        reply: `You can contact us through our website or leave your details here and we’ll get back to you.`
       });
     }
 
-    // Case 3: User asked for quote form
     if (askedForQuoteForm) {
       return res.status(200).json({
-        reply: `You can request a free quote here:\n👉 ${CONTACT.quoteFormUrl}\n\nFor an accurate price, leave your phone number or email and our office team will contact you shortly.`
-      });
-    }
-
-    // Case 4: Small job → Man and Van routing (conversion optimized)
-    if (isSmallJob) {
-      return res.status(200).json({
-        reply:
-          "I understand — that sounds like a small job.\n\n" +
-          "For this type of move we usually recommend our Man and Van service, which is perfect for small, light or flexible relocations.\n\n" +
-          "It's a simple service and in most cases we can arrange everything quickly without a survey. Our office team can confirm the details and give you an exact price once you contact us or leave your information.\n\n" +
-          `📞 ${CONTACT.phone}\n` +
-          `📧 Or leave your phone number or email here in the chat, and we'll get back to you within a few hours.`
+        reply: `You can request a quote on our website. Or leave your details here and we’ll handle everything for you.`
       });
     }
 
     // -----------------------------
-    // SYSTEM PROMPT
+    // LEAD FLOW (FIXED — NO MORE REPETITION)
+    // -----------------------------
+    if (shouldTriggerLeadFlow) {
+      return res.status(200).json({
+        reply:
+          "I can help with that.\n\n" +
+          "To give you an accurate price, I just need a few quick details.\n\n" +
+          "Can you leave your phone number or email here in the chat? Our team will get back to you shortly."
+      });
+    }
+
+    // -----------------------------
+    // SYSTEM PROMPT (OPTIMIZED FOR CONVERSION)
     // -----------------------------
     const systemMessage = {
       role: "system",
       content: `
-You are the Ants Removals AI Assistant (UK).
+You are a UK removals assistant.
 
 ${LANGUAGE_RULE}
 
 RULES:
-- Keep replies short and natural (max 3 paragraphs)
-- Never provide prices or estimates
-- If asked for price → say AI cannot provide pricing
-- Always recommend free home survey or office contact
+- Keep answers short and natural (max 3 paragraphs)
+- Never give prices
+- Focus on getting user to leave contact details in chat
+- Do NOT repeat phone/email unless user asks directly
+- If user shows intent → ask for contact details
 - No emojis
-- No sales fluff
-- Be helpful and conversational
+- Be conversational, not formal
 
-PRICE RULE:
-If user asks about cost/price:
-→ explain pricing depends on access, distance, volume, stairs, parking
-→ state AI cannot provide pricing
-→ recommend free survey or office contact
-
-CONTACT:
-📞 ${CONTACT.phone}
-📧 ${CONTACT.email}
-${CONTACT.website}
+If user asks for price:
+- Explain it depends on access, distance, volume
+- Ask for contact details instead of redirecting outside
       `.trim()
     };
 
     const fullMessages = [systemMessage, ...messages];
 
     // -----------------------------
-    // OPENAI REQUEST WITH TIMEOUT
+    // OPENAI CALL
     // -----------------------------
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     let response;
+
     try {
       response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -224,12 +218,6 @@ ${CONTACT.website}
         }),
         signal: controller.signal
       });
-    } catch (fetchError) {
-      if (fetchError.name === "AbortError") {
-        console.error("OpenAI request timeout");
-        return res.status(504).json({ error: "Request timeout. Please try again." });
-      }
-      throw fetchError;
     } finally {
       clearTimeout(timeoutId);
     }
@@ -237,27 +225,23 @@ ${CONTACT.website}
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("OpenAI error:", data);
       return res.status(500).json({
-        error: data.error?.message || "OpenAI service error"
+        error: data.error?.message || "OpenAI error"
       });
     }
 
-    let reply = data.choices?.[0]?.message?.content || "";
+    const reply = data.choices?.[0]?.message?.content;
 
-    // Safety fallback if OpenAI returns empty response
-    if (!reply || reply.length < 5) {
-      return res.status(200).json({
-        reply: `For an accurate price, please contact our office:\n📞 ${CONTACT.phone}\n📧 ${CONTACT.email}\n\nOr leave your phone number or email here in the chat and we'll call you back.`
-      });
-    }
-
-    return res.status(200).json({ reply });
+    return res.status(200).json({
+      reply:
+        reply?.length > 5
+          ? reply
+          : "I can help with that — can you share a few details about your move?"
+    });
 
   } catch (error) {
-    console.error("Server error:", error);
     return res.status(500).json({
-      error: "Something went wrong. Please try again later."
+      error: "Server error. Please try again later."
     });
   }
 }
