@@ -148,10 +148,14 @@ LANGUAGE RULES (STRICT):
       });
     }
 
-    // Case 4: Small job detection - bypass AI
+    // Case 4: Small job → Man and Van routing (conversion optimized)
     if (isSmallJob) {
       return res.status(200).json({
-        reply: `That sounds like a small job. We can help with that.\n\nFor a quick and accurate price, please contact our office directly or leave your details and we'll get back to you shortly.\n\n📞 ${CONTACT.phone}\n📧 ${CONTACT.email}`
+        reply:
+          "I understand — that sounds like a small job.\n\n" +
+          "For this type of move we usually recommend our Man and Van service, which is perfect for small, light or flexible relocations.\n\n" +
+          "It's a simple service and in most cases we can arrange everything quickly without a survey. Our office team can confirm the details and give you an exact price once you contact us or leave your information.\n\n" +
+          `📞 ${CONTACT.phone}\n📧 ${CONTACT.email}`
       });
     }
 
