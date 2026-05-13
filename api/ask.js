@@ -1,187 +1,252 @@
+cumm este acest script sa il folosc pe un asistent ai pe web situl meu?
+
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 
-  if (req.method === "OPTIONS") {
-    res.status(200).end();
-    return;
-  }
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
 
-  if (req.method !== "POST") {
-    res.status(405).json({ error: "Only POST requests allowed" });
-    return;
-  }
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Only POST requests allowed" });
+  }
 
-  try {
-    const { messages } = req.body;
-    const lastUserMessageRaw = messages[messages.length - 1]?.content || "";
-    const lastUserMessage = lastUserMessageRaw.toLowerCase();
+  try {
+    // -----------------------------
+    // VALIDARE REQUEST BODY
+    // -----------------------------
+    if (!req.body || typeof req.body !== "object") {
+      return res.status(400).json({ error: "Invalid request body" });
+    }
 
-    // Detectăm limba
-    const isRo =
-      /[ăâîșț]/i.test(lastUserMessageRaw) ||
-      /(mutare|depozit|ofertă|pret|preț|telefon|email|bun[ăa]|salut)/i.test(lastUserMessage);
+    const { messages } = req.body;
 
-    // Detectăm cererile utilizatorului
-    const askedForPhone = [
-      "phone number", "contact number", "can i call", "what is your phone",
-      "număr de telefon", "numarul de telefon",
-      "care este numărul vostru de telefon", "care este numarul vostru de telefon",
-      "telefonul", "telefon"
-    ].some(t => lastUserMessage.includes(t));
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: "Messages must be a non-empty array" });
+    }
 
-    const askedForEmail = [
-      "email", "adresa de email", "care este emailul", "email address",
-      "do you have an email", "what is your email", "mail", "e-mail"
-    ].some(t => lastUserMessage.includes(t));
+    // Validate each message has required fields
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      if (!msg.role || !msg.content || typeof msg.content !== "string") {
+        return res.status(400).json({ error: `Invalid message format at index ${i}` });
+      }
+    }
 
-    const askedForQuoteForm = [
-      "quote", "get a quote", "quote form", "contact form", "request form",
-      "formular", "cerere de ofertă", "cerere de oferta",
-      "deviz", "cerere de deviz"
-    ].some(t => lastUserMessage.includes(t));
+    const lastUserMessageRaw = messages[messages.length - 1]?.content || "";
+    const lastUserMessage = lastUserMessageRaw.toLowerCase();
 
-    const askedForContactGeneric = [
-      "contact you", "how can i contact you", "contact details", "how to contact",
-      "cum va pot contacta", "cum te pot contacta", "date de contact",
-      "cum va contactez", "vreau sa va contactez", "vreau să vă contactez"
-    ].some(t => lastUserMessage.includes(t));
+    // -----------------------------
+    // BUSINESS CONTACT (single source of truth)
+    // -----------------------------
+    const CONTACT = {
+      phone: "020 8807 3721",
+      email: "office@antsremovals.co.uk",
+      website: "https://antsremovals.co.uk",
+      quoteFormUrl: "https://antsremovals.co.uk/get-quote-2/"
+    };
 
-    // Verificăm dacă utilizatorul a lăsat deja date de contact
-    const phoneRegex = /(\+?\d[\d\s().-]{7,}\d)/;
-    const emailRegex = /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i;
-    const providedPhone = lastUserMessageRaw.match(phoneRegex)?.[0];
-    const providedEmail = lastUserMessageRaw.match(emailRegex)?.[0];
+    // -----------------------------
+    // LANGUAGE DETECTION (DYNAMIC - based on last message)
+    // -----------------------------
+    const detectLanguage = (text = "") => {
+      if (!text) return "en";
+      const t = text.toLowerCase();
 
-    // 🔎 A întrebat despre preț / cost?
-    const askedAboutPrice = (
-      [
-        "price", "cost", "how much", "how much is", "how much does",
-        "estimate", "estimation", "quotation", "quote", "ballpark", "rough price",
-        "pret", "preț", "cat costa", "cât costă", "costa",
-        "estimare", "deviz", "oferta de pret", "ofertă de preț",
-        "tarif", "tarife"
-      ].some(t => lastUserMessage.includes(t))
-    ) || /\b(£|gbp)\s*\d/i.test(lastUserMessage);
+      if (/[ăâîșț]/i.test(text)) return "ro";
+      if (/(hola|gracias|cuánto|precio|mudanza|hablas|español)/i.test(t)) return "es";
+      if (/(bonjour|merci|prix|combien|déménagement|français)/i.test(t)) return "fr";
+      if (/(hallo|danke|preis|kosten|umzug|deutsch)/i.test(t)) return "de";
+      if (/(ciao|grazie|quanto|prezzo|mudanza|italiano)/i.test(t)) return "it";
 
-    // ——————————————————————————————————————
-    // Răspunsuri separate pentru contact și linkuri
-    // ——————————————————————————————————————
-    if (providedPhone || providedEmail) {
-      const x = providedEmail || providedPhone;
-      return res.status(200).json({
-        reply: isRo
-          ? `Mulțumim — revenim la ${x}. Dacă preferi alt canal sau o oră anume, spune-ne.`
-          : `Thanks — we’ll get back to ${x}. If you prefer another channel or a specific time, just say.`
-      });
-    }
+      return "en";
+    };
 
-    if (askedForPhone) {
-      return res.status(200).json({
-        reply: isRo
-          ? `📞 020 8807 3721 (Mon–Fri, 9:00–17:00)`
-          : `📞 020 8807 3721 (Mon–Fri, 09:00–17:00)`
-      });
-    }
+    const activeLanguage = detectLanguage(lastUserMessageRaw);
 
-    if (askedForEmail) {
-      return res.status(200).json({
-        reply: `📧 office@antsremovals.co.uk`
-      });
-    }
+    const LANGUAGE_RULE = `
+LANGUAGE RULES (STRICT):
+- Always respond in the same language as the user's latest message
+- If the user changes language, immediately switch to that language
+- Never stick to previous language
+- Detected language for this response: ${activeLanguage}
+    `.trim();
 
-    if (askedForContactGeneric) {
-      return res.status(200).json({
-        reply: isRo
-          ? `📞 020 8807 3721 · 📧 office@antsremovals.co.uk (Lun–Vin, 9:00–17:00)`
-          : `📞 020 8807 3721 · 📧 office@antsremovals.co.uk (Mon–Fri, 09:00–17:00)`
-      });
-    }
+    // -----------------------------
+    // DETECT CONTACT DETAILS IN USER MESSAGE
+    // -----------------------------
+    const emailRegex = /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i;
 
-    if (askedForQuoteForm) {
-      const invite = isRo
-        ? "Dacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
-        : "If you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
+    const phoneRegex =
+      /(\+?44[\s\-]?\(?0\d{2,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4}|\+?\d[\d\s().-]{9,}\d)/;
 
-      return res.status(200).json({
-        reply: `You can request a free quote by filling out our online form:\n👉 https://antsremovals.co.uk/get-quote-2/\n\n${invite}`
-      });
-    }
+    const providedEmail = lastUserMessageRaw.match(emailRegex)?.[0];
+    const providedPhone = lastUserMessageRaw.match(phoneRegex)?.[0];
 
-    // ——————————————————————————————————————
-    // Sistemul EXISTENT (răspunsurile modelului)
-    // ——————————————————————————————————————
-    const systemMessage = {
-      role: "system",
-      content: `
-You are Ants Removals AI Assistant.
+    const isValidPhone = (phone) => {
+      if (!phone) return false;
+      return phone.replace(/\D/g, "").length >= 9;
+    };
 
-Your job is to help users with any questions related to moving, storage, packing, and relocation services. You must always be polite, helpful, and human-like in your tone.
+    const hasValidPhone = providedPhone && isValidPhone(providedPhone);
 
-Important rules:
-- Do NOT provide or estimate prices. Always say: "For an accurate price, we recommend a free home survey."
-- NEVER reveal or discuss what GPT model you are.
-- Do NOT mention or promote any other companies.
-- Do NOT compare Ants Removals negatively to any other companies.
-- Always represent Ants Removals as reliable, professional, and experienced.
-- If the user asks about removals or storage in general, explain how Ants Removals can help.
-- Use your OpenAI knowledge only to give helpful answers that support the Ants Removals image.
-- Always speak as part of the Ants Removals team. Use "we", "our team", or "I" when appropriate.
+    // -----------------------------
+    // INTENT DETECTION
+    // -----------------------------
+    // Removed the £ regex because it causes false positives
+    const priceKeywords = [
+      "price", "cost", "how much", "estimate", "quote", "quotation", "pricing",
+      "tariff", "pret", "preț", "cât costă", "cat costa", "costs",
+      "how much does", "what would it cost", "what's the cost", "how much for"
+    ];
 
-[STORAGE DETAILS]
-- Ants Removals uses breathable **wooden storage containers** with a volume of **250 cu ft**.
-- Dimensions per container: **2.18m (L) × 1.52m (W) × 2.34m (H)**
-- Containers are stackable and require forklift access.
-- They offer better protection against condensation and odours than shipping containers.
-- Storage is ideal for short-term or long-term use.
-- A 25m × 25m warehouse layout allows forklifts to circulate easily between rows.
-- Containers are stacked 3 high, placed back-to-back with space for turning.
-      `.trim()
-    };
+    const askedAboutPrice = priceKeywords.some(t => lastUserMessage.includes(t));
 
-    const fullMessages = [systemMessage, ...messages];
+    const contactKeywords = [
+      "contact", "phone", "email", "call", "contact details", "reach you"
+    ];
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: fullMessages,
-        temperature: 0.7
-      })
-    });
+    const askedForContact = contactKeywords.some(t => lastUserMessage.includes(t));
 
-    const data = await response.json();
+    const askedForQuoteForm = [
+      "quote form", "get a quote", "request form", "formular"
+    ].some(t => lastUserMessage.includes(t));
 
-   if (!response.ok) {
-  console.error("OpenAI API Error:", data);
-  return res.status(500).json({ error: "OpenAI error: " + data.error.message });
-}
+    // -----------------------------
+    // SMALL JOB DETECTION
+    // -----------------------------
+    const smallJobKeywords = [
+      "single", "one item", "just one", "sofa", "bed", "mattress",
+      "chair", "table", "fridge", "small move", "few items"
+    ];
 
-let reply = data.choices[0].message.content || "";
+    const isSmallJob = smallJobKeywords.some(t => lastUserMessage.includes(t)) && !askedAboutPrice;
 
-// 🔹 Înlocuim placeholder-urile cu datele reale
-reply = reply.replace(/\[phone number\]/gi, '<a href="tel:+442088073721">020 8807 3721</a>');
-reply = reply.replace(/\[email\]/gi, '<a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>');
+    // -----------------------------
+    // EARLY RESPONSES (NO AI CALL - saves tokens and time)
+    // -----------------------------
 
-// INVITAȚIE LA CONTACT — doar când se cere preț
-const shouldInviteContact = askedAboutPrice && !providedPhone && !providedEmail;
+    // Case 1: User provided contact details
+    if (providedEmail || hasValidPhone) {
+      const value = providedEmail || providedPhone;
+      return res.status(200).json({
+        reply: `Thanks — we've received your details (${value}). Our office team will contact you shortly.`
+      });
+    }
 
-if (shouldInviteContact) {
-  const invite = isRo
-    ? "\n\nDacă vrei un preț exact, lasă-ne un număr de telefon sau un email și te contactăm noi rapid."
-    : "\n\nIf you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
-  reply += invite;
-}
+    // Case 2: User asked for contact information
+    if (askedForContact) {
+      return res.status(200).json({
+        reply: `You can contact our office directly:\n📞 ${CONTACT.phone} (Mon–Fri 09:00–17:00)\n📧 ${CONTACT.email}\n${CONTACT.website}`
+      });
+    }
 
-res.status(200).json({ reply });
+    // Case 3: User asked for quote form
+    if (askedForQuoteForm) {
+      return res.status(200).json({
+        reply: `You can request a free quote here:\n👉 ${CONTACT.quoteFormUrl}\n\nFor an accurate price, leave your phone number or email and our office team will contact you shortly.`
+      });
+    }
 
-  } catch (error) {
-    console.error("Server error:", error);
-    res.status(500).json({ error: "Something went wrong." });
-  }
+    // Case 4: Small job detection - bypass AI
+    if (isSmallJob) {
+      return res.status(200).json({
+        reply: `That sounds like a small job. We can help with that.\n\nFor a quick and accurate price, please contact our office directly or leave your details and we'll get back to you shortly.\n\n📞 ${CONTACT.phone}\n📧 ${CONTACT.email}`
+      });
+    }
+
+    // -----------------------------
+    // SYSTEM PROMPT
+    // -----------------------------
+    const systemMessage = {
+      role: "system",
+      content: `
+You are the Ants Removals AI Assistant (UK).
+
+${LANGUAGE_RULE}
+
+RULES:
+- Keep replies short and natural (max 3 paragraphs)
+- Never provide prices or estimates
+- If asked for price → say AI cannot provide pricing
+- Always recommend free home survey or office contact
+- No emojis
+- No sales fluff
+- Be helpful and conversational
+
+PRICE RULE:
+If user asks about cost/price:
+→ explain pricing depends on access, distance, volume, stairs, parking
+→ state AI cannot provide pricing
+→ recommend free survey or office contact
+
+CONTACT:
+📞 ${CONTACT.phone}
+📧 ${CONTACT.email}
+${CONTACT.website}
+      `.trim()
+    };
+
+    const fullMessages = [systemMessage, ...messages];
+
+    // -----------------------------
+    // OPENAI REQUEST WITH TIMEOUT
+    // -----------------------------
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    let response;
+    try {
+      response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: fullMessages,
+          temperature: 0.4,
+          max_tokens: 250
+        }),
+        signal: controller.signal
+      });
+    } catch (fetchError) {
+      if (fetchError.name === "AbortError") {
+        console.error("OpenAI request timeout");
+        return res.status(504).json({ error: "Request timeout. Please try again." });
+      }
+      throw fetchError;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("OpenAI error:", data);
+      return res.status(500).json({
+        error: data.error?.message || "OpenAI service error"
+      });
+    }
+
+    let reply = data.choices?.[0]?.message?.content || "";
+
+    // Safety fallback if OpenAI returns empty response
+    if (!reply || reply.length < 5) {
+      return res.status(200).json({
+        reply: `For an accurate price, please contact our office:\n📞 ${CONTACT.phone}\n📧 ${CONTACT.email}`
+      });
+    }
+
+    return res.status(200).json({ reply });
+
+  } catch (error) {
+    console.error("Server error:", error);
+    return res.status(500).json({
+      error: "Something went wrong. Please try again later."
+    });
+  }
 }
