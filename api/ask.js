@@ -33,24 +33,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Check if user is asking for a form or wants to book
-    const formKeywords = ["form", "quote form", "booking form", "application", "request", "online form", "get a quote"];
-    const wantsForm = formKeywords.some(keyword => lastUserMessage.toLowerCase().includes(keyword));
-    
-    // Check if booking intent is clear (but no contact info yet)
-    const bookingIntent = ["move", "removal", "transport", "quote", "estimate", "price", "cost", "how much", "book", "booking", "relocation"].some(
-      keyword => lastUserMessage.toLowerCase().includes(keyword)
-    );
-
-    // If user explicitly asks for a form OR shows booking intent after some conversation
-    if (wantsForm || (bookingIntent && messages.length > 2)) {
-      return res.status(200).json({
-        reply: "Fill out our quick quote form for a personalized estimate:\nhttps://antsremovals.co.uk/get-quote-2/",
-        showForm: true,
-        formUrl: "https://antsremovals.co.uk/get-quote-2/"
-      });
-    }
-
     const systemMessage = {
       role: "system",
       content: `You are Ants Removals AI Assistant.
@@ -74,7 +56,8 @@ IMPORTANT RULES:
 
 PRICING RULE:
 - Never provide fixed prices or estimates
-- Always say: "Contact the office for an accurate price."
+- Always say:
+"For an accurate price, we recommend a free home survey."
 
 RESPONSE STYLE:
 - Keep replies short and clear
@@ -97,7 +80,7 @@ QUESTION RULES:
 
 JOB LOGIC:
 - Small jobs: naturally mention our Man and Van service
-- Large jobs: suggest contacting the office for an accurate price
+- Large jobs: naturally suggest a free home survey
 
 IMPORTANT:
 - Do not overcomplicate the conversation
@@ -105,18 +88,13 @@ IMPORTANT:
 
 CONTACT BEHAVIOUR:
 - If customer shows booking intent, naturally ask for phone number OR email address
-- When providing contact details, ALWAYS format them as clickable links:
-  * Phone: <a href="tel:02088073721">020 8807 3721</a>
-  * Email: <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>
+- NEVER provide both phone number and email in the same response
+- Provide ONLY ONE contact method per response (either phone OR email, not both)
+- If user asks for contact details, provide phone number only, not email
 
-OFFICIAL CONTACT DETAILS (clickable):
-- Phone: <a href="tel:02088073721">020 8807 3721</a>
-- Email: <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>
-
-FORM BEHAVIOUR:
-- When user asks for a form or shows clear booking intent, mention that we can send them our quote form
-- Suggest completing the form for a faster, more accurate response
-- Form URL: https://antsremovals.co.uk/get-quote-2/
+OFFICIAL CONTACT DETAILS:
+Phone: 020 8807 3721
+Email: office@antsremovals.co.uk
 
 STORAGE DETAILS:
 - We use breathable wooden storage containers
@@ -133,9 +111,14 @@ CONVERSATION STYLE:
 - Do not over-explain
 - Sound confident, not uncertain or overly polite
 
+QUESTION STYLE:
+- Only ask one short question when it helps move the booking forward
+- Prefer statements over questions
+- If unsure, guide instead of interrogating
+
 BOOKING BEHAVIOUR:
 - Always gently guide the user toward booking when intent is clear
-- If user shows interest, suggest next step naturally
+- If user shows interest, suggest next step naturally (call or email)
 - Do not be passive when intent is strong
 
 BALANCE RULE:
@@ -149,14 +132,11 @@ CLARITY:
 DUPLICATION CONTROL:
 - Do not repeat questions already asked in the conversation
 - Check conversation context before asking anything new
+- NEVER repeat the same phone number or email twice in one response
+- NEVER list both phone and email together
 
 TOKEN LIMIT:
-- Maximum 150 tokens per reply
-
-IMPORTANT FORMATTING:
-- When displaying phone numbers, ALWAYS use HTML link format: <a href="tel:02088073721">020 8807 3721</a>
-- When displaying email addresses, ALWAYS use HTML link format: <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>
-- This makes them clickable on phones and computers.`.trim()
+- Maximum 150 tokens per reply`.trim()
     };
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -180,18 +160,9 @@ IMPORTANT FORMATTING:
       return res.status(500).json({ error: err });
     }
 
-    let reply = data.choices?.[0]?.message?.content ||
-      "Contact us at <a href=\"tel:02088073721\">020 8807 3721</a> or <a href=\"mailto:office@antsremovals.co.uk\">office@antsremovals.co.uk</a> for more details.";
-
-    // Ensure any phone number or email in reply becomes clickable
-    reply = reply.replace(/(\d{3}[\s-]?\d{4}[\s-]?\d{4}|\d{4}[\s-]?\d{4})/g, (match) => {
-      const cleanNumber = match.replace(/\s/g, '');
-      return `<a href="tel:${cleanNumber}">${match}</a>`;
-    });
-    
-    reply = reply.replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, (match) => {
-      return `<a href="mailto:${match}">${match}</a>`;
-    });
+    const reply =
+      data.choices?.[0]?.message?.content ||
+      "Please contact our team at 020 8807 3721 for more details.";
 
     return res.status(200).json({ reply });
 
