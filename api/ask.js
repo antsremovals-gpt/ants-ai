@@ -1,3 +1,71 @@
+// ============================================
+// API Handler cu corectare linkuri pentru chat
+// ============================================
+
+// Funcție pentru corectarea linkurilor dublate
+function corecteazaLinkuriContact(text) {
+    if (!text || typeof text !== 'string') return text;
+    
+    let rezultat = text;
+    
+    // 1. Corectare număr de telefon format UK (02088073721)
+    rezultat = rezultat.replace(
+        /<a href="tel:<a href="tel:(\d+)">\1<\/a>"><a href="tel:\1">([^<]+)<\/a><\/a>/g,
+        '<a href="tel:$1">$2</a>'
+    );
+    
+    // 2. Corectare email
+    rezultat = rezultat.replace(
+        /<a href="mailto:<a href="mailto:([^"]+)">\1<\/a>"><a href="mailto:\1">([^<]+)<\/a><\/a>/g,
+        '<a href="mailto:$1">$2</a>'
+    );
+    
+    // 3. Caz general - orice dublare de linkuri
+    rezultat = rezultat.replace(
+        /<a href="(tel|mailto):<a[^>]+>([^<]+)<\/a>">[^<]*<a[^>]+>([^<]+)<\/a><\/a>/g,
+        function(match, tip, continut1, continut2) {
+            const continut = continut2 || continut1;
+            if (tip === 'tel') {
+                const numarCurat = continut.replace(/\s/g, '');
+                return `<a href="tel:${numarCurat}">${continut}</a>`;
+            } else {
+                return `<a href="mailto:${continut}">${continut}</a>`;
+            }
+        }
+    );
+    
+    // 4. Curăță tag-uri HTML dublate rămase
+    rezultat = rezultat.replace(
+        /<a href="(tel|mailto):([^"]+)"><a href="[^"]+">([^<]+)<\/a><\/a>/g,
+        '<a href="$1:$2">$3</a>'
+    );
+    
+    // 5. Elimină orice alt format de link invalid
+    rezultat = rezultat.replace(
+        /<a href="(tel|mailto):([^">]*[&<>][^">]*)">/g,
+        function(match, tip, continutGresit) {
+            const numarCurat = continutGresit.replace(/<[^>]*>/g, '').replace(/\s/g, '');
+            if (tip === 'tel') {
+                return `<a href="tel:${numarCurat}">`;
+            }
+            return match;
+        }
+    );
+    
+    return rezultat;
+}
+
+// Funcție pentru a genera link-uri corecte din text simplu
+function genereazaLinkContact(text, tip, valoare, textAfisat) {
+    if (tip === 'tel') {
+        const numarCurat = valoare.replace(/\s/g, '');
+        return `<a href="tel:${numarCurat}">${textAfisat || valoare}</a>`;
+    } else if (tip === 'mailto') {
+        return `<a href="mailto:${valoare}">${textAfisat || valoare}</a>`;
+    }
+    return text;
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -96,6 +164,18 @@ OFFICIAL CONTACT DETAILS:
 Phone: 020 8807 3721
 Email: office@antsremovals.co.uk
 
+📞 PHONE NUMBER FORMATTING RULE:
+- When providing the phone number, ALWAYS format it as a clickable link
+- Use this EXACT format: <a href="tel:02088073721">020 8807 3721</a>
+- NEVER nest multiple <a> tags
+- NEVER double-wrap the phone number
+- Provide the phone number ONCE, not twice
+
+📧 EMAIL FORMATTING RULE:
+- When providing email, use this EXACT format: <a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>
+- NEVER nest multiple <a> tags
+- Provide the email ONCE, not twice
+
 STORAGE DETAILS:
 - We use breathable wooden storage containers
 - Each container has a volume of 250 cu ft
@@ -134,6 +214,7 @@ DUPLICATION CONTROL:
 - Check conversation context before asking anything new
 - NEVER repeat the same phone number or email twice in one response
 - NEVER list both phone and email together
+- NEVER double-wrap contact links
 
 TOKEN LIMIT:
 - Maximum 150 tokens per reply`.trim()
@@ -160,9 +241,27 @@ TOKEN LIMIT:
       return res.status(500).json({ error: err });
     }
 
-    const reply =
-      data.choices?.[0]?.message?.content ||
-      "Please contact our team at 020 8807 3721 for more details.";
+    let reply = data.choices?.[0]?.message?.content ||
+      "Please contact our team at <a href=\"tel:02088073721\">020 8807 3721</a> for more details.";
+
+    // APLICĂ CORECTAREA LINKURILOR ÎNAINTE DE TRIMITERE
+    reply = corecteazaLinkuriContact(reply);
+
+    // Verifică și corectează manual dacă linkurile nu sunt corecte
+    if (reply.includes('href="tel') && !reply.match(/href="tel:\d+">[^<]+<\/a>/)) {
+      // Dacă linkul e corupt, înlocuiește-l cu formatul corect
+      reply = reply.replace(
+        /(020\s?8807\s?3721|02088073721)/g,
+        '<a href="tel:02088073721">020 8807 3721</a>'
+      );
+    }
+    
+    if (reply.includes('href="mailto') && !reply.match(/href="mailto:[^"]+@[^"]+\.[^"]+">[^<]+<\/a>/)) {
+      reply = reply.replace(
+        /(office@antsremovals\.co\.uk)/g,
+        '<a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>'
+      );
+    }
 
     return res.status(200).json({ reply });
 
