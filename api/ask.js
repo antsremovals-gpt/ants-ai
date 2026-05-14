@@ -4,45 +4,127 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 
   if (req.method === "OPTIONS") {
-    return res.status(200).end();
+    res.status(200).end();
+    return;
   }
 
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Only POST requests allowed" });
+    res.status(405).json({ error: "Only POST requests allowed" });
+    return;
   }
 
   try {
-    const { messages } = req.body || {};
+    const { messages } = req.body;
+    const lastUserMessageRaw = messages[messages.length - 1]?.content || "";
+    const lastUserMessage = lastUserMessageRaw.toLowerCase();
 
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: "Invalid messages" });
-    }
+    // Small job detection (NEW RULE - checked FIRST)
+    const smallJobKeywords = [
+      // Single items
+      "single item", "one item", "just one", "only one",
+      // Furniture / appliances
+      "sofa", "bed", "mattress",
+      "chair", "table", "fridge",
+      "washing machine", "dryer",
+      // Small move expressions
+      "small move", "tiny move", "mini move", "little move",
+      "small job", "tiny job", "mini job", "little job",
+      // Quantity-based
+      "few items", "couple of items", "handful of items",
+      // Other
+      "light move", "small relocation", "man and van"
+    ];
 
-    const lastUserMessage =
-      messages[messages.length - 1]?.content || "";
+    const isSmallJob = smallJobKeywords.some(t =>
+      lastUserMessage.includes(t)
+    );
 
-    // -----------------------------
-    // CONTACT DETECTION (simple + safe)
-    // -----------------------------
-    const emailRegex =
-      /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i;
-
-    const phoneRegex =
-      /(\+?\d[\d\s().-]{7,}\d)/;
-
-    const providedEmail = lastUserMessage.match(emailRegex)?.[0];
-    const providedPhone = lastUserMessage.match(phoneRegex)?.[0];
-
-    if (providedEmail || providedPhone) {
+    if (isSmallJob) {
       return res.status(200).json({
         reply:
-          "Thanks — our team will get back to you shortly."
+          "I understand — that sounds like a small job.\n\n" +
+          "For this type of move we usually recommend our Man and Van service, which is perfect for small, light or flexible relocations.\n\n" +
+          "It's a simple service and in most cases we can arrange everything quickly without a survey. Our office team can confirm the details and give you an exact price once you contact us or leave your information.\n\n" +
+          "📞 020 8807 3721\n📧 office@antsremovals.co.uk"
       });
     }
 
-    // -----------------------------
-    // SYSTEM PROMPT (YOUR EXACT RULES)
-    // -----------------------------
+    // Detect language
+    const isRo =
+      /[ăâîșț]/i.test(lastUserMessageRaw) ||
+      /(moving|storage|quote|price|phone|email|hello|hi)/i.test(lastUserMessage);
+
+    // Detect user requests
+    const askedForPhone = [
+      "phone number", "contact number", "can i call", "what is your phone",
+      "telephone", "phone"
+    ].some(t => lastUserMessage.includes(t));
+
+    const askedForEmail = [
+      "email", "email address", "do you have an email", "what is your email",
+      "mail", "e-mail"
+    ].some(t => lastUserMessage.includes(t));
+
+    const askedForQuoteForm = [
+      "quote", "get a quote", "quote form", "contact form", "request form",
+      "form", "request a quote", "estimate"
+    ].some(t => lastUserMessage.includes(t));
+
+    const askedForContactGeneric = [
+      "contact you", "how can i contact you", "contact details", "how to contact",
+      "contact"
+    ].some(t => lastUserMessage.includes(t));
+
+    // Check if user already provided contact details
+    const phoneRegex = /(\+?\d[\d\s().-]{7,}\d)/;
+    const emailRegex = /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i;
+    const providedPhone = lastUserMessageRaw.match(phoneRegex)?.[0];
+    const providedEmail = lastUserMessageRaw.match(emailRegex)?.[0];
+
+    // Price detection
+    const askedAboutPrice = (
+      [
+        "price", "cost", "how much", "estimate", "quotation", "quote",
+        "price", "cost", "how much does"
+      ].some(t => lastUserMessage.includes(t))
+    ) || /\b(£|gbp)\s*\d/i.test(lastUserMessage);
+
+    // Contact with direct phone/email
+    if (providedPhone || providedEmail) {
+      const x = providedEmail || providedPhone;
+      return res.status(200).json({
+        reply: `Thanks — we’ll get back to ${x}. If you prefer another channel or a specific time, just let us know.`
+      });
+    }
+
+    if (askedForPhone) {
+      return res.status(200).json({
+        reply: `📞 020 8807 3721 (Mon–Fri, 09:00–17:00)`
+      });
+    }
+
+    if (askedForEmail) {
+      return res.status(200).json({
+        reply: `📧 office@antsremovals.co.uk`
+      });
+    }
+
+    if (askedForContactGeneric) {
+      return res.status(200).json({
+        reply: `📞 020 8807 3721 · 📧 office@antsremovals.co.uk (Mon–Fri, 09:00–17:00)`
+      });
+    }
+
+    if (askedForQuoteForm) {
+      const invite =
+        "If you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
+
+      return res.status(200).json({
+        reply: `You can request a free quote by filling out our online form:\n👉 https://antsremovals.co.uk/get-quote-2/\n\n${invite}`
+      });
+    }
+
+    // System prompt with RESPONSE LENGTH RULE added
     const systemMessage = {
       role: "system",
       content: `
@@ -50,72 +132,68 @@ You are Ants Removals AI Assistant.
 
 Your job is to help users with questions related to moving, storage, packing, and relocation services. You must always be polite, helpful, and natural in tone.
 
-IMPORTANT RULES:
-- Never reveal or mention that you are an AI or GPT model
-- Never mention competitors or recommend other companies
-- Never compare Ants Removals negatively
-- Always represent Ants Removals as reliable, experienced, and professional
-- Always speak using "we", "our team", and "us"
+Important rules:
+- Do NOT provide or estimate prices. Always say: "For an accurate price, we recommend a free home survey."
+- NEVER reveal or mention that you are a GPT model.
+- Do NOT mention or promote other companies.
+- Do NOT compare Ants Removals negatively with competitors.
+- Always represent Ants Removals as reliable, professional, and experienced.
+- Always speak as part of the Ants Removals team using "we" and "our team".
 
-PRICING RULE:
-- Never provide fixed prices or estimates
-- Always say: "For an accurate price, we recommend a free home survey."
+RESPONSE LENGTH RULE:
+- Keep all answers short and clear
+- Maximum 3–5 lines per reply
+- Avoid long explanations or repeated ideas
+- Only expand if the user explicitly asks for details
+- Prefer simple, direct sentences
 
-RESPONSE STYLE:
-- Keep replies short and clear
-- Maximum 3–5 short lines
-- Stay strictly on topic
-- Avoid long explanations
-- Avoid repetitive wording
-- Avoid robotic replies
-- Use natural UK English
-
-CONTACT BEHAVIOUR:
-- If customer shows booking intent, naturally ask for phone number OR email address
-
-OFFICIAL CONTACT DETAILS:
-Phone: 020 8807 3721 | Email: office@antsremovals.co.uk
-
-STORAGE DETAILS:
-- Wooden containers: 250 cu ft (2.18m L × 1.52m W × 2.34m H)
-- Stackable, forklift access, protects against condensation
-- Suitable for short or long-term storage
+[STORAGE DETAILS]
+- Ants Removals uses breathable wooden storage containers with a volume of 250 cu ft.
+- Dimensions per container: 2.18m (L) × 1.52m (W) × 2.34m (H)
+- Containers are stackable and require forklift access.
+- They protect better against condensation and odours than shipping containers.
+- Suitable for short-term and long-term storage.
+- Warehouse layout allows forklift circulation between rows.
       `.trim()
     };
 
-    const response = await fetch(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [systemMessage, ...messages],
-          temperature: 0.7,
-          max_tokens: 150
-        })
-      }
-    );
+    const fullMessages = [systemMessage, ...messages];
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages: fullMessages,
+        temperature: 0.7
+      })
+    });
 
     const data = await response.json();
 
     if (!response.ok) {
-      return res.status(500).json({
-        error: data.error?.message || "OpenAI error"
-      });
+      console.error("OpenAI API Error:", data);
+      return res.status(500).json({ error: "OpenAI error: " + data.error.message });
     }
 
-    const reply =
-      data.choices?.[0]?.message?.content ||
-      "Please contact our team for more details.";
+    let reply = data.choices[0].message.content || "";
 
-    return res.status(200).json({ reply });
+    const shouldInviteContact = askedAboutPrice && !providedPhone && !providedEmail;
 
+    // Replace placeholders
+    reply = reply.replace(/\[phone number\]/gi, '<a href="tel:+442088073721">020 8807 3721</a>');
+    reply = reply.replace(/\[email\]/gi, '<a href="mailto:office@antsremovals.co.uk">office@antsremovals.co.uk</a>');
+
+    if (shouldInviteContact) {
+      reply += "\n\nIf you’d like an exact price, leave a phone number or email and we’ll get back to you quickly.";
+    }
+
+    res.status(200).json({ reply });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Server error" });
+    console.error("Server error:", error);
+    res.status(500).json({ error: "Something went wrong." });
   }
 }
