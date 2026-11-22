@@ -20,7 +20,7 @@ export default async function handler(req, res) {
       secure: true,
       auth: {
         user: 'ants.ai.report@gmail.com',
-        pass: 'xrkjpmbpktbonlsu'
+        pass: 'mrmwtchupjdrqsqf'
       }
     });
 
