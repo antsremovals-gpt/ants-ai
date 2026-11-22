@@ -1,15 +1,8 @@
 {
-  "version": 2,
-  "routes": [
-    {
-      "src": "/api/ask",
-      "methods": ["POST", "OPTIONS"],
-      "dest": "api/ask.js"
-    },
-    {
-      "src": "/api/save-chat",
-      "methods": ["POST", "OPTIONS"],
-      "dest": "api/save-chat.js"
-    }
-  ]
+  "name": "ants-ai",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "nodemailer": "^6.9.15"
+  }
 }
